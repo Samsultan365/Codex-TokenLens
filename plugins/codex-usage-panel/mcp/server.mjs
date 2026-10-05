@@ -1,4 +1,5 @@
 ﻿import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
 import { codexHome, loadPluginConfig, resolvePlatform, maskSecret } from "./lib/config.mjs";
@@ -201,7 +202,7 @@ async function handleTool(name, args) {
   if (name === "codex_usage_sync_thread") {
     const sessionId = args?.session_id || process.env.CODEX_THREAD_ID || null;
     if (!sessionId) throw new Error("missing session_id");
-    const file = path.join(codexHome(), "codex-usage-panel-active-thread.json");
+    const file = path.join(os.tmpdir(), "codex-usage-panel-active-thread.json");
     const payload = { sessionId, updatedAt: new Date().toISOString() };
     fs.writeFileSync(file, JSON.stringify(payload), "utf8");
     return textContent(`Synced active thread: ${sessionId}`);
@@ -317,6 +318,7 @@ if (process.argv.includes("--smoke")) {
     process.exitCode = 1;
   });
 }
+
 
 
 

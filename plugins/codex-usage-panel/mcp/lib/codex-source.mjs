@@ -1,4 +1,5 @@
 ﻿import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { codexHome } from "./config.mjs";
 import { createRequire } from "node:module";
@@ -88,7 +89,7 @@ function newestStateDb() {
   }
 }
 
-const ACTIVE_THREAD_FILE = path.join(codexHome(), "codex-usage-panel-active-thread.json");
+const ACTIVE_THREAD_FILE = path.join(os.tmpdir(), "codex-usage-panel-active-thread.json");
 
 function readActiveThreadFile() {
   try {
@@ -262,6 +263,7 @@ export function latestLocalUsage(preferredThreadId) {
 export function availableSessionCount() {
   return collectJsonl(SESSION_ROOT).length;
 }
+
 
 
 
