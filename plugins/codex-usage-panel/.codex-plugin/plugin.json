@@ -50,7 +50,7 @@
     }
   },
   "interface": {
-    "displayName": "Codex Usage Panel",
+    "displayName": "Codex TokenLens",
     "shortDescription": "Token usage and balance in chat",
     "longDescription": "A local, read-only Codex plugin that shows the latest thread token usage, context occupancy, and provider balance. It reads local Codex session logs and queries a configured provider balance endpoint. No session content is uploaded.",
     "developerName": "Codex Usage Panel contributors",

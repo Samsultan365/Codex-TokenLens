@@ -1,4 +1,4 @@
-﻿# Codex Usage Panel
+# Codex TokenLens
 
 一个精致小巧的 Codex 本地插件：在对话内查看当前 **token 用量**、**上下文占用**、**额度/重置时间**，并按当前模型自动识别平台查询 **余额**（DeepSeek / OpenAI / OpenRouter / OpenAI-compatible）。
 
