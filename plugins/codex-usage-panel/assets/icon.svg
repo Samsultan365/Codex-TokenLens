@@ -1,0 +1,8 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="28" fill="#0F172A"/>
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="none" stroke="#14B8A6" stroke-opacity="0.35" stroke-width="2"/>
+  <rect x="30" y="70" width="16" height="34" rx="6" fill="#14B8A6"/>
+  <rect x="56" y="52" width="16" height="52" rx="6" fill="#5EEAD4"/>
+  <rect x="82" y="34" width="16" height="70" rx="6" fill="#F8FAFC"/>
+  <text x="64" y="28" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#9FB3C8">TOKENS</text>
+</svg>
