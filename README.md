@@ -21,23 +21,23 @@ A small, local Codex plugin and always-on-top widget for **token usage**, **cont
 
 ```text
 .
-├── .agents/plugins/marketplace.json
-├── plugins/codex-usage-panel/
-│   ├── .codex-plugin/plugin.json
-│   ├── .mcp.json
-│   ├── mcp/
-│   │   ├── launcher.cmd
-│   │   ├── server.mjs
-│   │   ├── cli.mjs
-│   │   └── lib/
-│   └── skills/codex-usage-panel/SKILL.md
-├── widget/
-│   ├── CodexUsageWidget.ps1
-│   └── Launch-Widget.vbs
-├── scripts/
-│   └── Install-Autostart.ps1
-├── docs/design.md
-└── README.md
+鈹溾攢鈹€ .agents/plugins/marketplace.json
+鈹溾攢鈹€ plugins/codex-usage-panel/
+鈹?  鈹溾攢鈹€ .codex-plugin/plugin.json
+鈹?  鈹溾攢鈹€ .mcp.json
+鈹?  鈹溾攢鈹€ mcp/
+鈹?  鈹?  鈹溾攢鈹€ launcher.cmd
+鈹?  鈹?  鈹溾攢鈹€ server.mjs
+鈹?  鈹?  鈹溾攢鈹€ cli.mjs
+鈹?  鈹?  鈹斺攢鈹€ lib/
+鈹?  鈹斺攢鈹€ skills/codex-usage-panel/SKILL.md
+鈹溾攢鈹€ widget/
+鈹?  鈹溾攢鈹€ CodexUsageWidget.ps1
+鈹?  鈹斺攢鈹€ Launch-Widget.vbs
+鈹溾攢鈹€ scripts/
+鈹?  鈹斺攢鈹€ Install-Autostart.ps1
+鈹溾攢鈹€ docs/design.md
+鈹斺攢鈹€ README.md
 ```
 
 ## Install the Codex plugin
@@ -64,7 +64,7 @@ widget\Launch-Widget.vbs
 
 The widget:
 
-- stays on top
+- stays visible only while Codex is the foreground app
 - has no taskbar entry
 - can be dragged to any position
 - refreshes usage every 1 second

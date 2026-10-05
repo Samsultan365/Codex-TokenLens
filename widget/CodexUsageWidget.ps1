@@ -19,6 +19,10 @@ public static class CodexUsageWidget_NativeMethods {
   public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
   [DllImport("user32.dll")]
   public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+  [DllImport("user32.dll")]
+  public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")]
+  public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 }
 "@
 }
@@ -116,6 +120,20 @@ function Wait-ForCodexWindow {
   return $false
 }
 
+function Test-AllowedForeground {
+  $hwnd = [CodexUsageWidget_NativeMethods]::GetForegroundWindow()
+  if ($hwnd -eq [IntPtr]::Zero) { return $false }
+  $processId = 0
+  [void][CodexUsageWidget_NativeMethods]::GetWindowThreadProcessId($hwnd, [ref]$processId)
+  if ($processId -eq 0) { return $false }
+  try {
+    $proc = Get-Process -Id $processId -ErrorAction Stop
+    if (($proc.ProcessName -eq "ChatGPT") -or ($proc.ProcessName -eq "Codex")) { return $true }
+    if ((($proc.ProcessName -eq "powershell") -or ($proc.ProcessName -eq "pwsh")) -and ($processId -eq $PID)) { return $true }
+  } catch {}
+  return $false
+}
+
 function Get-CodexRect {
   $codex = Get-Process Codex,ChatGPT -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
   if (-not $codex) { return $null }
@@ -146,7 +164,7 @@ function Show-Widget {
   }
 
   $xaml = @"
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" FontFamily="Segoe UI" WindowStyle="None" AllowsTransparency="True" Background="Transparent" ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False" Width="320" Height="112">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" FontFamily="Segoe UI" WindowStyle="None" ShowActivated="False" AllowsTransparency="True" Background="Transparent" ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False" Width="320" Height="112">
   <Border x:Name="Root" CornerRadius="14" Background="#F2101A2B" BorderBrush="#5C0F766E" BorderThickness="1" Padding="16,12">
     <Grid>
       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -197,6 +215,12 @@ function Show-Widget {
   $timer = New-Object System.Windows.Threading.DispatcherTimer
   $timer.Interval = [TimeSpan]::FromSeconds(1)
   $timer.Add_Tick({
+    if (Test-AllowedForeground) {
+      if ($window.Visibility -ne [System.Windows.Visibility]::Visible) { $window.Show() }
+      $window.Topmost = $true
+    } else {
+      if ($window.Visibility -eq [System.Windows.Visibility]::Visible) { $window.Hide() }
+    }
     $script:Tick += 1
     if (($script:Tick % 10) -eq 0) { $data = Get-Snapshot } else { $data = Get-Snapshot -SkipBalance }
     if ($data -and $null -eq $data.balance -and $script:LastBalance) { $data.balance = $script:LastBalance }

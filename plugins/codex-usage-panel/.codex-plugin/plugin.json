@@ -1,6 +1,6 @@
 {
   "name": "codex-usage-panel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Small inline panel for Codex token usage, context occupancy, and provider balance. Auto-detects DeepSeek, OpenAI, OpenRouter, and OpenAI-compatible providers.",
   "author": {
     "name": "Codex Usage Panel contributors"

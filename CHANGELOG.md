@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.1] - 2026-10-05
+
+### Changed
+- Widget hides when Codex is not the foreground application
+- Widget reappears automatically when Codex regains focus
+
 ## [1.0.0] - 2026-10-05
 
 ### Added
