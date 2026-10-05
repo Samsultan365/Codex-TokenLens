@@ -1,107 +1,94 @@
 # Codex TokenLens
 
-一个精致小巧的 Codex 本地插件：在对话内查看当前 **token 用量**、**上下文占用**、**额度/重置时间**，并按当前模型自动识别平台查询 **余额**（DeepSeek / OpenAI / OpenRouter / OpenAI-compatible）。
-
-> 本项目是第三方工具，不是 OpenAI 官方产品。插件只读取本机 Codex 数据和可选的环境变量密钥，不上传会话内容。
-
-## 实时置顶小组件
-
-如果你要的是常驻在旁边、自动刷新、不用打开网页的显示方式，请启动：
+涓€涓簿鑷村皬宸х殑 Codex 鏈湴鎻掍欢锛氬湪瀵硅瘽鍐呮煡鐪嬪綋鍓?**token 鐢ㄩ噺**銆?*涓婁笅鏂囧崰鐢?*銆?*棰濆害/閲嶇疆鏃堕棿**锛屽苟鎸夊綋鍓嶆ā鍨嬭嚜鍔ㄨ瘑鍒钩鍙版煡璇?**浣欓**锛圖eepSeek / OpenAI / OpenRouter / OpenAI-compatible锛夈€?
+> 鏈」鐩槸绗笁鏂瑰伐鍏凤紝涓嶆槸 OpenAI 瀹樻柟浜у搧銆傛彃浠跺彧璇诲彇鏈満 Codex 鏁版嵁鍜屽彲閫夌殑鐜鍙橀噺瀵嗛挜锛屼笉涓婁紶浼氳瘽鍐呭銆?
+## 瀹炴椂缃《灏忕粍浠?
+濡傛灉浣犺鐨勬槸甯搁┗鍦ㄦ梺杈广€佽嚜鍔ㄥ埛鏂般€佷笉鐢ㄦ墦寮€缃戦〉鐨勬樉绀烘柟寮忥紝璇峰惎鍔細
 
 ```powershell
 .\widget\CodexUsageWidget.ps1
 ```
 
-或直接双击：
+鎴栫洿鎺ュ弻鍑伙細
 
 ```powershell
 .\widget\Launch-Widget.vbs
 ```
 
-小组件特点：
+灏忕粍浠剁壒鐐癸細
 
-- 始终置顶、无任务栏图标、可拖动并记住位置
-- 每 8 秒刷新，并尝试贴在 Codex 窗口旁边
-- 显示内容非常直白：当前对话名、已用 token、上下文百分比、余额
-- 复用同一个 Node 数据层（`mcp/cli.mjs`），与 Codex 插件结果一致
-
-## 当前能力（v0.1 框架）
-
-- `codex_usage_panel`：最新线程 token 用量 + 上下文占用 + rate-limit 状态
-- `codex_balance_panel`：按平台自动查询余额
-- `codex_usage_and_balance`：合并显示一张内联面板
-- `codex_usage_diagnostics`：查看自动识别结果与密钥配置状态（密钥打码）
-
-## 目录结构
+- 濮嬬粓缃《銆佹棤浠诲姟鏍忓浘鏍囥€佸彲鎷栧姩骞惰浣忎綅缃?- 姣?8 绉掑埛鏂帮紝骞跺皾璇曡创鍦?Codex 绐楀彛鏃佽竟
+- 鏄剧ず鍐呭闈炲父鐩寸櫧锛氬綋鍓嶅璇濆悕銆佸凡鐢?token銆佷笂涓嬫枃鐧惧垎姣斻€佷綑棰?- 澶嶇敤鍚屼竴涓?Node 鏁版嵁灞傦紙`mcp/cli.mjs`锛夛紝涓?Codex 鎻掍欢缁撴灉涓€鑷?
+## 褰撳墠鑳藉姏锛坴0.1 妗嗘灦锛?
+- `codex_usage_panel`锛氭渶鏂扮嚎绋?token 鐢ㄩ噺 + 涓婁笅鏂囧崰鐢?+ rate-limit 鐘舵€?- `codex_balance_panel`锛氭寜骞冲彴鑷姩鏌ヨ浣欓
+- `codex_usage_and_balance`锛氬悎骞舵樉绀轰竴寮犲唴鑱旈潰鏉?- `codex_usage_diagnostics`锛氭煡鐪嬭嚜鍔ㄨ瘑鍒粨鏋滀笌瀵嗛挜閰嶇疆鐘舵€侊紙瀵嗛挜鎵撶爜锛?
+## 鐩綍缁撴瀯
 
 ```text
 .
-├── .agents/plugins/marketplace.json
-├── plugins/codex-usage-panel/
-│   ├── .codex-plugin/plugin.json
-│   ├── .mcp.json
-│   ├── mcp/
-│   │   ├── launcher.cmd
-│   │   ├── server.mjs
-│   │   └── lib/
-│   │       ├── config.mjs
-│   │       ├── codex-source.mjs
-│   │       ├── render.mjs
-│   │       └── adapters/
-│   └── skills/codex-usage-panel/SKILL.md
-├── widget/\n│   ├── CodexUsageWidget.ps1\n│   └── Launch-Widget.vbs\n├── docs/design.md
-└── README.md
+鈹溾攢鈹€ .agents/plugins/marketplace.json
+鈹溾攢鈹€ plugins/codex-usage-panel/
+鈹?  鈹溾攢鈹€ .codex-plugin/plugin.json
+鈹?  鈹溾攢鈹€ .mcp.json
+鈹?  鈹溾攢鈹€ mcp/
+鈹?  鈹?  鈹溾攢鈹€ launcher.cmd
+鈹?  鈹?  鈹溾攢鈹€ server.mjs
+鈹?  鈹?  鈹斺攢鈹€ lib/
+鈹?  鈹?      鈹溾攢鈹€ config.mjs
+鈹?  鈹?      鈹溾攢鈹€ codex-source.mjs
+鈹?  鈹?      鈹溾攢鈹€ render.mjs
+鈹?  鈹?      鈹斺攢鈹€ adapters/
+鈹?  鈹斺攢鈹€ skills/codex-usage-panel/SKILL.md
+鈹溾攢鈹€ widget/\n鈹?  鈹溾攢鈹€ CodexUsageWidget.ps1\n鈹?  鈹斺攢鈹€ Launch-Widget.vbs\n鈹溾攢鈹€ docs/design.md
+鈹斺攢鈹€ README.md
 ```
 
-## 安装
+## 瀹夎
 
-### 从 GitHub 安装 marketplace
+### 浠?GitHub 瀹夎 marketplace
 
 ```powershell
-codex plugin marketplace add <你的仓库 Git URL>
+codex plugin marketplace add <浣犵殑浠撳簱 Git URL>
 codex plugin list --marketplace codex-usage-panel-marketplace --available --json
 codex plugin add codex-usage-panel --marketplace codex-usage-panel-marketplace
 ```
 
-### 本地安装 marketplace
+### 鏈湴瀹夎 marketplace
 
 ```powershell
 codex plugin marketplace add "C:\path\to\codex-usage-panel"
 codex plugin add codex-usage-panel --marketplace codex-usage-panel-marketplace
 ```
 
-### 配置余额密钥
+### 閰嶇疆浣欓瀵嗛挜
 
-按需设置环境变量，插件不会把密钥写进仓库：
-
+鎸夐渶璁剧疆鐜鍙橀噺锛屾彃浠朵笉浼氭妸瀵嗛挜鍐欒繘浠撳簱锛?
 ```powershell
 $env:DEEPSEEK_API_KEY = "sk-..."
 $env:OPENAI_API_KEY = "sk-..."
 $env:OPENROUTER_API_KEY = "sk-or-..."
 ```
 
-然后在 Codex 对话中说“显示我的 Codex 用量和余额”。
+鐒跺悗鍦?Codex 瀵硅瘽涓鈥滄樉绀烘垜鐨?Codex 鐢ㄩ噺鍜屼綑棰濃€濄€?
+## 鑷姩璇嗗埆瑙勫垯
 
-## 自动识别规则
+- 妯″瀷鍚嶆垨 `base_url` 鍚?`deepseek` 鈫?DeepSeek
+- `base_url` 鍚?`openrouter.ai` 鈫?OpenRouter
+- `base_url` 鍚?`api.openai.com` / `openai.com`锛屾垨 `model_provider=openai` 涓旀棤 base_url 鈫?OpenAI
+- 鍏朵綑 鈫?OpenAI-compatible
 
-- 模型名或 `base_url` 含 `deepseek` → DeepSeek
-- `base_url` 含 `openrouter.ai` → OpenRouter
-- `base_url` 含 `api.openai.com` / `openai.com`，或 `model_provider=openai` 且无 base_url → OpenAI
-- 其余 → OpenAI-compatible
+## DeepSeek / 鏈湴浠ｇ悊浣欓璇存槑
 
-## DeepSeek / 本地代理余额说明
+鎻掍欢榛樿瀵?DeepSeek 浣跨敤 `{origin}/user/balance`銆傚鏋?`base_url` 鏄湰鍦颁唬鐞嗭紙渚嬪 `http://127.0.0.1:15721/v1`锛変笖璇ヤ唬鐞嗘湭浠ｇ悊浣欓鎺ュ彛锛屾彃浠朵細缁欏嚭鏄庣‘鎻愮ず銆?
+鍙€夋柟妗堬細
 
-插件默认对 DeepSeek 使用 `{origin}/user/balance`。如果 `base_url` 是本地代理（例如 `http://127.0.0.1:15721/v1`）且该代理未代理余额接口，插件会给出明确提示。
-
-可选方案：
-
-1. 设置真实 DeepSeek Key 后查询官方余额：
+1. 璁剧疆鐪熷疄 DeepSeek Key 鍚庢煡璇㈠畼鏂逛綑棰濓細
 
 ```powershell
 $env:DEEPSEEK_API_KEY = "sk-..."
 ```
 
-2. 若本地代理暴露了余额端点，在 `~/.codex/codex-usage-panel.config.json` 中覆盖：
+2. 鑻ユ湰鍦颁唬鐞嗘毚闇蹭簡浣欓绔偣锛屽湪 `~/.codex/codex-usage-panel.config.json` 涓鐩栵細
 
 ```json
 {
@@ -114,40 +101,28 @@ $env:DEEPSEEK_API_KEY = "sk-..."
 }
 ```
 
-3. 也可以使用环境变量 `DEEPSEEK_BALANCE_URL` 临时覆盖。
+3. 涔熷彲浠ヤ娇鐢ㄧ幆澧冨彉閲?`DEEPSEEK_BALANCE_URL` 涓存椂瑕嗙洊銆?
+## 鍙€夐厤缃?
+鎶?`plugins/codex-usage-panel/codex-usage-panel.config.example.json` 澶嶅埗涓?`~/.codex/codex-usage-panel.config.json`锛屽彲瑕嗙洊瀵嗛挜鐜鍙橀噺鍚嶅拰浣欓鍦板潃銆?
+## 鍙傝€冪殑鍚岀被椤圭洰
 
-## 可选配置
+- [KNODEdev/codex-usage](https://github.com/KNODEdev/codex-usage)锛氭湰鍦?`token_count` 浜嬩欢 + MCP 宸ュ叿鐨?Codex 鎻掍欢
+- [lllybxgs/codex-usage-widget](https://github.com/lllybxgs/codex-usage-widget)锛歁CP 鎻掍欢 + Windows 妗岄潰灏忕粍浠?- [Liuxiny/codex-usage-bar](https://github.com/Liuxiny/codex-usage-bar)锛氬畼鏂?App Server 涓?CC Switch 鏁版嵁婧愮殑鑷畾涔夌獥鍙?
+## 鏁版嵁婧愪紭鍏堢骇
 
-把 `plugins/codex-usage-panel/codex-usage-panel.config.example.json` 复制为 `~/.codex/codex-usage-panel.config.json`，可覆盖密钥环境变量名和余额地址。
+1. 瀹樻柟 App Server锛歚account/read`銆乣account/usage/read`銆乣account/rateLimits/read`
+2. 鏈湴鍥為€€锛歚~/.codex/sessions/**/*.jsonl` 鐨勬渶鏂?`token_count`
 
-## 参考的同类项目
+濡傛灉 App Server 涓嶅彲鐢紙渚嬪褰撳墠 CLI 鏈繍琛屾湰鍦?daemon锛夛紝鎻掍欢浼氳嚜鍔ㄥ洖閫€鍒版湰鍦?JSONL锛屼笉浼氫腑鏂煡璇€?
+## 宸茬煡闄愬埗
 
-- [KNODEdev/codex-usage](https://github.com/KNODEdev/codex-usage)：本地 `token_count` 事件 + MCP 工具的 Codex 插件
-- [lllybxgs/codex-usage-widget](https://github.com/lllybxgs/codex-usage-widget)：MCP 插件 + Windows 桌面小组件
-- [Liuxiny/codex-usage-bar](https://github.com/Liuxiny/codex-usage-bar)：官方 App Server 与 CC Switch 数据源的自定义窗口
+- Codex 鎻掍欢 manifest 鐩墠鍙毚闇?`skills` 涓?`mcpServers`锛屾棤娉曞祵鍏ュ師鐢熷父椹讳晶鏍忋€傛湰鎻掍欢閲囩敤鈥滃璇濆唴鍐呰仈鍗＄墖 + 鎸夐渶鍒锋柊鈥濄€?- OpenAI Platform 娌℃湁鍏紑鐨勪綑棰濇煡璇?API锛屾彃浠跺彧鍋?API Key 鏍￠獙骞舵彁绀哄墠寰€缃戦〉鏌ョ湅銆?- 褰撳墠鑷畾涔?provider锛堝鏈湴浠ｇ悊锛夎嫢涓嶄唬鐞嗕綑棰濇帴鍙ｏ紝闇€瑕佸崟鐙缃搴斿钩鍙扮殑 `*_API_KEY` 鎴栭厤缃?`balance_url`銆?
+## CC Switch 鑷姩璇诲彇 DeepSeek 瀵嗛挜
 
-## 数据源优先级
+濡傛灉绯荤粺宸插畨瑁?[CC Switch](https://github.com/cc-switch/cc-switch) 涓斿綋鍓?Codex provider 鏄?DeepSeek锛屾彃浠朵細浼樺厛浠?`~/.cc-switch/cc-switch.db` 鑷姩璇诲彇瀵嗛挜鐢ㄤ簬浣欓鏌ヨ銆傝杩囩▼鍙湪鏈満鍙戠敓锛屽瘑閽ヤ笉浼氬啓鍏ヤ粨搴撱€佹棩蹇楁垨鑱婂ぉ鍐呭銆?
+## 闅愮
 
-1. 官方 App Server：`account/read`、`account/usage/read`、`account/rateLimits/read`
-2. 本地回退：`~/.codex/sessions/**/*.jsonl` 的最新 `token_count`
-
-如果 App Server 不可用（例如当前 CLI 未运行本地 daemon），插件会自动回退到本地 JSONL，不会中断查询。
-
-## 已知限制
-
-- Codex 插件 manifest 目前可暴露 `skills` 与 `mcpServers`，无法嵌入原生常驻侧栏。本插件采用“对话内内联卡片 + 按需刷新”。
-- OpenAI Platform 没有公开的余额查询 API，插件只做 API Key 校验并提示前往网页查看。
-- 当前自定义 provider（如本地代理）若不代理余额接口，需要单独设置对应平台的 `*_API_KEY` 或配置 `balance_url`。
-
-## CC Switch 自动读取 DeepSeek 密钥
-
-如果系统已安装 [CC Switch](https://github.com/cc-switch/cc-switch) 且当前 Codex provider 是 DeepSeek，插件会优先从 `~/.cc-switch/cc-switch.db` 自动读取密钥用于余额查询。该过程只在本机发生，密钥不会写入仓库、日志或聊天内容。
-
-## 隐私
-
-- 不写入或上传会话 JSONL 内容。
-- 余额请求仅发往识别出的平台端点。
-- 诊断输出会把密钥打码。
+- 涓嶅啓鍏ユ垨涓婁紶浼氳瘽 JSONL 鍐呭銆?- 浣欓璇锋眰浠呭彂寰€璇嗗埆鍑虹殑骞冲彴绔偣銆?- 璇婃柇杈撳嚭浼氭妸瀵嗛挜鎵撶爜銆?
 
 
 

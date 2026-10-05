@@ -157,7 +157,20 @@ function Move-NextToCodex($window) {
   $window.Top = [double]$rect.Top + 12
 }
 
+function Wait-ForCodexWindow {
+  $deadline = (Get-Date).AddMinutes(30)
+  while ((Get-Date) -lt $deadline) {
+    $proc = Get-Process Codex,ChatGPT -ErrorAction SilentlyContinue |
+      Where-Object { $_.MainWindowHandle -ne 0 } |
+      Select-Object -First 1
+    if ($proc) { return $true }
+    Start-Sleep -Seconds 2
+  }
+  return $false
+}
+
 function Show-Widget {
+  Wait-ForCodexWindow | Out-Null
   $pluginDir = Resolve-PluginDir
   $node = Find-Node
   if (-not $pluginDir -or -not $node) {
@@ -299,6 +312,7 @@ if ($Test) {
 } else {
   Show-Widget
 }
+
 
 
 
