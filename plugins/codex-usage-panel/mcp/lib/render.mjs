@@ -27,24 +27,43 @@ export function renderUsageMarkdown(usage, platform) {
   if (!usage) {
     return "未找到本地 Codex `token_count` 记录。请先在 Codex 中发起一轮对话后重试。";
   }
-  const last = usage.last;
-  const total = usage.total;
+  const last = usage.last || {};
+  const total = usage.total || {};
+  const app = usage.appServer;
+  const account = app?.account;
+  const accountUsage = app?.usage;
   const primary = usage.rateLimits?.primary;
   const secondary = usage.rateLimits?.secondary;
   const credits = usage.rateLimits?.credits;
-  const plan = usage.rateLimits?.planType || "自定义 provider";
-  const context = usage.contextWindow
-    ? `${formatNumber(last.inputTokens)} / ${formatNumber(usage.contextWindow)} tokens (${formatPercent(last.contextPercent)})`
-    : `${formatNumber(last.inputTokens)} tokens`;
+  const plan = usage.rateLimits?.planType || (account?.planType ? `ChatGPT ${account.planType}` : "自定义 provider");
 
   const lines = [
     "## Codex 用量面板",
     "",
     `- 平台：${platformName(platform.platform)} · ${platform.displayName || platform.model || "unknown"}`,
-    `- 当前上下文：${context}`,
-    `- 本轮 token：输入 ${formatNumber(last.inputTokens)} · 缓存 ${formatNumber(last.cachedInputTokens)} · 输出 ${formatNumber(last.outputTokens)} · 推理 ${formatNumber(last.reasoningOutputTokens)} · 合计 ${formatNumber(last.totalTokens)}`,
-    `- 会话累计：${formatNumber(total.totalTokens)} tokens`,
   ];
+
+  if (account?.email || account?.type) {
+    lines.push(`- 账户：${account.email || account.type}${account.planType ? ` · ${account.planType}` : ""}`);
+  }
+  if (usage.contextWindow && last.inputTokens != null) {
+    const context = `${formatNumber(last.inputTokens)} / ${formatNumber(usage.contextWindow)} tokens (${formatPercent(last.contextPercent)})`;
+    lines.push(`- 当前上下文：${context}`);
+  }
+  if (last.totalTokens != null) {
+    lines.push(
+      `- 本轮 token：输入 ${formatNumber(last.inputTokens)} · 缓存 ${formatNumber(last.cachedInputTokens)} · 输出 ${formatNumber(last.outputTokens)} · 推理 ${formatNumber(last.reasoningOutputTokens)} · 合计 ${formatNumber(last.totalTokens)}`,
+    );
+  }
+  if (total.totalTokens != null) {
+    lines.push(`- 会话累计：${formatNumber(total.totalTokens)} tokens`);
+  }
+  if (accountUsage?.lifetimeTokens != null) {
+    lines.push(`- 账户累计：${formatNumber(accountUsage.lifetimeTokens)} tokens`);
+  }
+  if (accountUsage?.peakDailyTokens != null) {
+    lines.push(`- 单日峰值：${formatNumber(accountUsage.peakDailyTokens)} tokens`);
+  }
 
   if (primary || secondary) {
     if (primary) {
@@ -109,5 +128,6 @@ export function renderBalanceMarkdown(balance) {
 export function renderCombined(usage, balance, platform) {
   return `${renderUsageMarkdown(usage, platform)}\n\n${renderBalanceMarkdown(balance)}`;
 }
+
 
 

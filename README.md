@@ -105,6 +105,13 @@ $env:DEEPSEEK_API_KEY = "sk-..."
 - [lllybxgs/codex-usage-widget](https://github.com/lllybxgs/codex-usage-widget)：MCP 插件 + Windows 桌面小组件
 - [Liuxiny/codex-usage-bar](https://github.com/Liuxiny/codex-usage-bar)：官方 App Server 与 CC Switch 数据源的自定义窗口
 
+## 数据源优先级
+
+1. 官方 App Server：`account/read`、`account/usage/read`、`account/rateLimits/read`
+2. 本地回退：`~/.codex/sessions/**/*.jsonl` 的最新 `token_count`
+
+如果 App Server 不可用（例如当前 CLI 未运行本地 daemon），插件会自动回退到本地 JSONL，不会中断查询。
+
 ## 已知限制
 
 - Codex 插件 manifest 目前可暴露 `skills` 与 `mcpServers`，无法嵌入原生常驻侧栏。本插件采用“对话内内联卡片 + 按需刷新”。
@@ -120,5 +127,6 @@ $env:DEEPSEEK_API_KEY = "sk-..."
 - 不写入或上传会话 JSONL 内容。
 - 余额请求仅发往识别出的平台端点。
 - 诊断输出会把密钥打码。
+
 
 

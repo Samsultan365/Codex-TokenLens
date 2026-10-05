@@ -19,7 +19,7 @@ The latest `token_count` event in `~/.codex/sessions/**/*.jsonl` contains:
 
 The parser reads only the last 512 KiB of each file for speed and privacy.
 
-### App Server (planned)
+### App Server (implemented)
 
 The generated App Server protocol exposes:
 
@@ -28,7 +28,7 @@ The generated App Server protocol exposes:
 - `thread/tokenUsage/updated`
 - `account/rateLimits/updated`
 
-These can be queried by spawning `codex app-server proxy`. They are more accurate for ChatGPT subscription accounts but may return empty for API-key/custom providers.
+`mcp/lib/app-server-source.mjs` spawns `codex app-server proxy` and normalizes the responses. They are more accurate for ChatGPT subscription accounts but may be unavailable for API-key/custom providers; the server falls back to local JSONL.
 
 ## Balance adapters
 
@@ -45,5 +45,6 @@ These can be queried by spawning `codex app-server proxy`. They are more accurat
 - Keys are read from environment variables only.
 - Optional config stores `api_key_env` names, never raw secrets.
 - The repository must not contain `auth.json`, session JSONL, or `.env`.
+
 
 

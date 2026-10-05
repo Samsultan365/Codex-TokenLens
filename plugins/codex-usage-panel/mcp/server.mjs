@@ -1,6 +1,7 @@
 ﻿import readline from "node:readline";
 import { loadPluginConfig, resolvePlatform, maskSecret } from "./lib/config.mjs";
 import { latestLocalUsage, availableSessionCount } from "./lib/codex-source.mjs";
+import { queryAppServerSnapshot } from "./lib/app-server-source.mjs";
 import { queryBalance, apiKeyFor, apiKeySourceFor } from "./lib/adapters/index.mjs";
 import { renderUsageMarkdown, renderBalanceMarkdown, renderCombined } from "./lib/render.mjs";
 
@@ -101,8 +102,38 @@ function error(id, code, message) {
 async function usageSnapshot(args = {}) {
   const threadId = args.thread_id || process.env.CODEX_THREAD_ID || null;
   const platform = resolvePlatform();
-  const usage = latestLocalUsage(threadId);
-  return { usage, platform, threadId };
+  const local = latestLocalUsage(threadId);
+
+  let appServer = null;
+  try {
+    appServer = await queryAppServerSnapshot({ threadId });
+  } catch {
+    appServer = null;
+  }
+
+  let usage = local;
+  if (local && appServer) {
+    usage = {
+      ...local,
+      source: "app_server+local_jsonl",
+      appServer,
+      rateLimits: appServer.rateLimits || local.rateLimits,
+    };
+  } else if (local) {
+    usage = { ...local, source: "local_jsonl" };
+  } else if (appServer) {
+    usage = {
+      source: "app_server",
+      appServer,
+      rateLimits: appServer.rateLimits,
+      contextWindow: null,
+      last: null,
+      total: null,
+      observedAt: null,
+    };
+  }
+
+  return { usage, platform, threadId, appServer };
 }
 
 async function balanceSnapshot(args = {}) {
@@ -156,6 +187,13 @@ async function handleTool(name, args) {
   if (name === "codex_usage_diagnostics") {
     const platform = resolvePlatform();
     const pluginConfig = loadPluginConfig();
+    let appServer = null;
+    let appServerError = null;
+    try {
+      appServer = await queryAppServerSnapshot({});
+    } catch (error) {
+      appServerError = error.message;
+    }
     const keyStatus = {};
     const keySource = {};
     for (const p of ["deepseek", "openai", "openrouter"]) {
@@ -170,6 +208,15 @@ async function handleTool(name, args) {
       platform: platform.platform,
       displayName: platform.displayName,
       sessionFiles: availableSessionCount(),
+      appServerAvailable: Boolean(appServer),
+      appServerError: appServerError
+        ? appServerError
+            .split(/\r?\n/)
+            .filter((line) => line && !line.startsWith("WARNING"))
+            .slice(-2)
+            .join(" | ")
+            .slice(0, 300)
+        : null,
       apiKeyConfigured: keyStatus,
       apiKeySource: keySource,
       authType: platform.auth?.OPENAI_API_KEY ? "api_key" : "unknown",
@@ -247,5 +294,8 @@ if (process.argv.includes("--smoke")) {
     process.exitCode = 1;
   });
 }
+
+
+
 
 
