@@ -3,6 +3,7 @@ import path from "node:path";
 import { codexHome } from "./config.mjs";
 
 const SESSION_ROOT = path.join(codexHome(), "sessions");
+const SESSION_INDEX = path.join(codexHome(), "session_index.jsonl");
 const TAIL_BYTES = 512 * 1024;
 
 function collectJsonl(root) {
@@ -45,6 +46,25 @@ function readTail(file) {
   // If the file is larger than the tail window, the first line is partial.
   if (stat.size > TAIL_BYTES) lines.shift();
   return lines;
+}
+
+function loadThreadNames() {
+  const names = new Map();
+  try {
+    const lines = fs.readFileSync(SESSION_INDEX, "utf8").split(/\r?\n/);
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const entry = JSON.parse(line);
+        if (entry.id && entry.thread_name) names.set(entry.id, entry.thread_name);
+      } catch {
+        // ignore malformed lines
+      }
+    }
+  } catch {
+    // index may not exist yet
+  }
+  return names;
 }
 
 function threadIdFromName(file) {
@@ -124,6 +144,7 @@ function normalizeRateLimits(rateLimits) {
 
 export function latestLocalUsage(preferredThreadId) {
   const threadId = preferredThreadId || process.env.CODEX_THREAD_ID || null;
+  const threadNames = loadThreadNames();
   const files = collectJsonl(SESSION_ROOT);
   if (files.length === 0) return null;
 
@@ -144,10 +165,12 @@ export function latestLocalUsage(preferredThreadId) {
       }
       const usage = extractTokenCount(entry);
       if (!usage) continue;
+      const resolvedThreadId = threadIdFromName(file.path) || threadId || null;
       return {
         source: "local_jsonl",
         file: file.path,
-        threadId: threadIdFromName(file.path) || threadId || null,
+        threadId: resolvedThreadId,
+        threadName: resolvedThreadId ? threadNames.get(resolvedThreadId) || null : null,
         ...usage,
       };
     }
@@ -158,4 +181,5 @@ export function latestLocalUsage(preferredThreadId) {
 export function availableSessionCount() {
   return collectJsonl(SESSION_ROOT).length;
 }
+
 

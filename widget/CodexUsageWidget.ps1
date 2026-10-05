@@ -8,18 +8,29 @@ Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName PresentationCore
 Add-Type -AssemblyName WindowsBase
 
+if (-not ("CodexUsageWidget.NativeMethods" -as [type])) {
+  Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class CodexUsageWidget_NativeMethods {
+  [StructLayout(LayoutKind.Sequential)]
+  public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
+  [DllImport("user32.dll")]
+  public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+}
+"@
+}
+
 $script:PluginDir = $null
 $script:SettingsPath = Join-Path $env:USERPROFILE ".codex\codex-usage-widget.json"
 
 function Resolve-PluginDir {
   if ($script:PluginDir) { return $script:PluginDir }
-
   $repo = Join-Path $PSScriptRoot "..\plugins\codex-usage-panel"
   if (Test-Path (Join-Path $repo "mcp\cli.mjs")) {
     $script:PluginDir = (Resolve-Path $repo).Path
     return $script:PluginDir
   }
-
   $cacheRoot = Join-Path $env:USERPROFILE ".codex\plugins\cache\codex-usage-panel-marketplace\codex-usage-panel"
   if (Test-Path $cacheRoot) {
     $latest = Get-ChildItem $cacheRoot -Directory | Sort-Object Name -Descending | Select-Object -First 1
@@ -28,7 +39,6 @@ function Resolve-PluginDir {
       return $script:PluginDir
     }
   }
-
   return $null
 }
 
@@ -37,24 +47,15 @@ function Find-Node {
   if ($env:CODEX_MCP_NODE_PATH) { $candidates += $env:CODEX_MCP_NODE_PATH }
   if ($env:CODEX_BROWSER_USE_NODE_PATH) { $candidates += $env:CODEX_BROWSER_USE_NODE_PATH }
   if ($env:CODEX_ELECTRON_RESOURCES_PATH) { $candidates += (Join-Path $env:CODEX_ELECTRON_RESOURCES_PATH "cua_node\bin\node.exe") }
-  if ($env:CODEX_CLI_PATH) {
-    $dir = Split-Path $env:CODEX_CLI_PATH -Parent
-    $candidates += (Join-Path $dir "cua_node\bin\node.exe")
-  }
+  if ($env:CODEX_CLI_PATH) { $candidates += (Join-Path (Split-Path $env:CODEX_CLI_PATH -Parent) "cua_node\bin\node.exe") }
   $candidates += (Join-Path $env:USERPROFILE ".cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe")
   if ($env:LOCALAPPDATA) {
     $runtimeRoot = Join-Path $env:LOCALAPPDATA "OpenAI\Codex\runtimes\cua_node"
     if (Test-Path $runtimeRoot) {
-      foreach ($dir in (Get-ChildItem $runtimeRoot -Directory)) {
-        $candidates += (Join-Path $dir.FullName "bin\node.exe")
-      }
+      foreach ($dir in (Get-ChildItem $runtimeRoot -Directory)) { $candidates += (Join-Path $dir.FullName "bin\node.exe") }
     }
   }
-
-  foreach ($candidate in $candidates) {
-    if ($candidate -and (Test-Path $candidate)) { return $candidate }
-  }
-
+  foreach ($candidate in $candidates) { if ($candidate -and (Test-Path $candidate)) { return $candidate } }
   $node = Get-Command node -ErrorAction SilentlyContinue
   if ($node) { return $node.Source }
   return $null
@@ -66,7 +67,6 @@ function Get-Snapshot {
   if (-not $node -or -not $pluginDir) { return $null }
   $cli = Join-Path $pluginDir "mcp\cli.mjs"
   if (-not (Test-Path $cli)) { return $null }
-
   $raw = & $node $cli --json 2>$null | Out-String
   if (-not $raw) { return $null }
   try { return ($raw | ConvertFrom-Json) } catch { return $null }
@@ -88,6 +88,38 @@ function Write-Settings($window) {
   } catch {}
 }
 
+function Shorten-Text($text, [int]$max = 18) {
+  if (-not $text) { return "当前对话" }
+  if ($text.Length -le $max) { return $text }
+  return $text.Substring(0, $max) + "…"
+}
+
+function Get-CodexRect {
+  $codex = Get-Process Codex -ErrorAction SilentlyContinue |
+    Where-Object { $_.MainWindowHandle -ne 0 } |
+    Select-Object -First 1
+  if (-not $codex) { return $null }
+
+  $rect = New-Object CodexUsageWidget_NativeMethods+RECT
+  if ([CodexUsageWidget_NativeMethods]::GetWindowRect($codex.MainWindowHandle, [ref]$rect)) {
+    return [ordered]@{ Left=$rect.Left; Top=$rect.Top; Right=$rect.Right; Bottom=$rect.Bottom }
+  }
+  return $null
+}
+
+function Move-NextToCodex($window) {
+  $rect = Get-CodexRect
+  if (-not $rect) { return }
+  $screenRight = [System.Windows.SystemParameters]::WorkArea.Right
+  $desiredLeft = [double]$rect.Right + 8
+  if (($desiredLeft + $window.Width) -le $screenRight) {
+    $window.Left = $desiredLeft
+  } else {
+    $window.Left = [double]$rect.Right - $window.Width - 12
+  }
+  $window.Top = [double]$rect.Top + 12
+}
+
 function Show-Widget {
   $pluginDir = Resolve-PluginDir
   $node = Find-Node
@@ -102,20 +134,22 @@ function Show-Widget {
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   WindowStyle="None" AllowsTransparency="True" Background="Transparent"
   ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False"
-  Width="264" Height="96">
-  <Border x:Name="Root" CornerRadius="14" Background="#E6101A2B" BorderBrush="#4C0F766E" BorderThickness="1" Padding="14,10">
+  Width="252" Height="92">
+  <Border x:Name="Root" CornerRadius="14" Background="#F2101A2B" BorderBrush="#5C0F766E" BorderThickness="1" Padding="14,9">
     <Grid>
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
-      <StackPanel Orientation="Horizontal">
-        <TextBlock x:Name="TitleText" Text="Codex" Foreground="#F2F2F2" FontSize="12" FontWeight="SemiBold"/>
-        <TextBlock x:Name="CloseText" Text="  ✕" Foreground="#8FA3B8" FontSize="12" HorizontalAlignment="Right" Cursor="Hand"/>
-      </StackPanel>
-      <TextBlock x:Name="UsageText" Grid.Row="1" Margin="0,6,0,0" Foreground="#DFE7EF" FontSize="11" Text="读取中…"/>
-      <TextBlock x:Name="BalanceText" Grid.Row="2" Margin="0,4,0,0" Foreground="#5EEAD4" FontSize="12" FontWeight="SemiBold" Text="余额读取中…"/>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+      <TextBlock x:Name="ThreadText" Grid.Column="0" Text="当前对话" Foreground="#9FB3C8" FontSize="11"/>
+      <TextBlock x:Name="CloseText" Grid.Column="1" Text="✕" Foreground="#8FA3B8" FontSize="11" Cursor="Hand" VerticalAlignment="Top"/>
+      <TextBlock x:Name="UsageText" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,4,0,0" Foreground="#FFFFFF" FontSize="14" FontWeight="SemiBold" Text="已用 token 读取中…"/>
+      <TextBlock x:Name="BalanceText" Grid.Row="2" Grid.ColumnSpan="2" Margin="0,3,0,0" Foreground="#5EEAD4" FontSize="12" Text="余额读取中…"/>
     </Grid>
   </Border>
 </Window>
@@ -123,11 +157,10 @@ function Show-Widget {
 
   $reader = New-Object System.Xml.XmlNodeReader ([xml]$xaml)
   $window = [Windows.Markup.XamlReader]::Load($reader)
-
-  $title = $window.FindName("TitleText")
-  $close = $window.FindName("CloseText")
+  $threadText = $window.FindName("ThreadText")
   $usageText = $window.FindName("UsageText")
   $balanceText = $window.FindName("BalanceText")
+  $close = $window.FindName("CloseText")
   $root = $window.FindName("Root")
 
   $settings = Read-Settings
@@ -137,14 +170,14 @@ function Show-Widget {
       $window.Top = [double]$settings.top
     } catch {}
   } else {
-    $window.Left = [System.Windows.SystemParameters]::WorkArea.Right - $window.Width - 20
-    $window.Top = 40
+    Move-NextToCodex $window
+    if ($window.Left -le 0) {
+      $window.Left = [System.Windows.SystemParameters]::WorkArea.Right - $window.Width - 20
+      $window.Top = 40
+    }
   }
 
-  $root.Add_MouseLeftButtonDown({
-    try { $window.DragMove() } catch {}
-  })
-
+  $root.Add_MouseLeftButtonDown({ try { $window.DragMove() } catch {} })
   $close.Add_MouseLeftButtonUp({
     $_.Handled = $true
     Write-Settings $window
@@ -153,56 +186,50 @@ function Show-Widget {
 
   function Update-UI($data) {
     if (-not $data) {
+      $threadText.Text = "当前对话"
       $usageText.Text = "读取失败"
-      $balanceText.Text = "—"
+      $balanceText.Text = "余额不可用"
       return
     }
 
-    $platform = $data.platform
     $usage = $data.usage
     $balance = $data.balance
 
-    $display = $platform.displayName
-    if (-not $display) { $display = $platform.model }
-    if (-not $display) { $display = "Codex" }
-    $title.Text = "Codex · $display"
+    $threadText.Text = Shorten-Text $usage.threadName 18
 
-    if ($usage -and $usage.last) {
-      $percent = 0.0
-      if ($usage.last.contextPercent -ne $null) { $percent = [double]$usage.last.contextPercent }
-      $used = if ($usage.last.inputTokens -ne $null) { [int64]$usage.last.inputTokens } else { 0 }
-      $window = $usage.contextWindow
-      $usageText.Text = "上下文 {0} / {1}  ({2:N1}%)" -f $used, $window, $percent
-    } else {
-      $usageText.Text = "暂无本地 token 数据"
-    }
+    $used = 0
+    if ($usage.total -and $usage.total.totalTokens -ne $null) { $used = [int64]$usage.total.totalTokens }
+    elseif ($usage.last -and $usage.last.totalTokens -ne $null) { $used = [int64]$usage.last.totalTokens }
 
-    if ($balance) {
-      if ($balance.ok -and $balance.platform -eq "deepseek") {
-        $balanceText.Text = "余额 {0} {1}" -f $balance.totalBalance, $balance.currency
-      } elseif ($balance.ok -and $balance.platform -eq "openrouter") {
-        $balanceText.Text = "Credits {0}" -f $balance.totalCredits
-      } elseif ($balance.ok) {
-        $balanceText.Text = "账户有效"
-      } else {
-        $balanceText.Text = "余额不可用"
-      }
+    $percent = 0.0
+    if ($usage.last -and $usage.last.contextPercent -ne $null) { $percent = [double]$usage.last.contextPercent }
+
+    $usageText.Text = "已用 {0:N0} token · 上下文 {1:N0}%" -f $used, $percent
+
+    if ($balance -and $balance.ok -and $balance.platform -eq "deepseek") {
+      $balanceText.Text = "余额 ¥{0}" -f $balance.totalBalance
+    } elseif ($balance -and $balance.ok -and $balance.platform -eq "openrouter") {
+      $balanceText.Text = "余额 {0} credits" -f $balance.totalCredits
+    } elseif ($balance -and $balance.ok) {
+      $balanceText.Text = "余额：账户有效"
     } else {
       $balanceText.Text = "余额不可用"
     }
   }
 
   $timer = New-Object System.Windows.Threading.DispatcherTimer
-  $timer.Interval = [TimeSpan]::FromSeconds(10)
+  $timer.Interval = [TimeSpan]::FromSeconds(8)
   $timer.Add_Tick({
     $data = Get-Snapshot
     Update-UI $data
+    Move-NextToCodex $window
     Write-Settings $window
   })
   $timer.Start()
 
   $data = Get-Snapshot
   Update-UI $data
+  Move-NextToCodex $window
   Write-Settings $window
 
   [void]$window.ShowDialog()
