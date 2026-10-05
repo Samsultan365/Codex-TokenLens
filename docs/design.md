@@ -32,7 +32,7 @@ These can be queried by spawning `codex app-server proxy`. They are more accurat
 
 ## Balance adapters
 
-- DeepSeek: `GET {origin}/user/balance`, fields `balance_infos[0].total_balance`, `granted_balance`, `topped_up_balance`.
+- DeepSeek: `GET {origin}/user/balance`, fields `balance_infos[0].total_balance`, `granted_balance`, `topped_up_balance`. Local proxy without this route falls back to the official DeepSeek endpoint when `DEEPSEEK_API_KEY` is set, or an explicit `providers.deepseek.balance_url` / `DEEPSEEK_BALANCE_URL` override.
 - OpenRouter: `GET https://openrouter.ai/api/v1/credits`, fields `data.total_credits`, `data.total_usage`.
 - OpenAI: validate `/v1/models`; no public balance endpoint.
 - Generic: validate `/v1/models` or `/models`; no standard balance endpoint.
@@ -42,3 +42,4 @@ These can be queried by spawning `codex app-server proxy`. They are more accurat
 - Keys are read from environment variables only.
 - Optional config stores `api_key_env` names, never raw secrets.
 - The repository must not contain `auth.json`, session JSONL, or `.env`.
+

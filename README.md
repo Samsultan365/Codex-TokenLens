@@ -68,6 +68,33 @@ $env:OPENROUTER_API_KEY = "sk-or-..."
 - `base_url` 含 `api.openai.com` / `openai.com`，或 `model_provider=openai` 且无 base_url → OpenAI
 - 其余 → OpenAI-compatible
 
+## DeepSeek / 本地代理余额说明
+
+插件默认对 DeepSeek 使用 `{origin}/user/balance`。如果 `base_url` 是本地代理（例如 `http://127.0.0.1:15721/v1`）且该代理未代理余额接口，插件会给出明确提示。
+
+可选方案：
+
+1. 设置真实 DeepSeek Key 后查询官方余额：
+
+```powershell
+$env:DEEPSEEK_API_KEY = "sk-..."
+```
+
+2. 若本地代理暴露了余额端点，在 `~/.codex/codex-usage-panel.config.json` 中覆盖：
+
+```json
+{
+  "providers": {
+    "deepseek": {
+      "api_key_env": "DEEPSEEK_API_KEY",
+      "balance_url": "http://127.0.0.1:15721/your-balance-path"
+    }
+  }
+}
+```
+
+3. 也可以使用环境变量 `DEEPSEEK_BALANCE_URL` 临时覆盖。
+
 ## 可选配置
 
 把 `plugins/codex-usage-panel/codex-usage-panel.config.example.json` 复制为 `~/.codex/codex-usage-panel.config.json`，可覆盖密钥环境变量名和余额地址。
@@ -89,3 +116,4 @@ $env:OPENROUTER_API_KEY = "sk-or-..."
 - 不写入或上传会话 JSONL 内容。
 - 余额请求仅发往识别出的平台端点。
 - 诊断输出会把密钥打码。
+

@@ -18,16 +18,18 @@ export function apiKeyFor(platform, pluginConfig) {
 
 export async function queryBalance(platformInfo, pluginConfig) {
   const { platform, baseUrl } = platformInfo;
+  const providerConfig = pluginConfig?.providers?.[platform] || {};
   const apiKey = apiKeyFor(platform, pluginConfig);
+  const balanceUrl = providerConfig.balance_url || providerConfig.balanceUrl || null;
   switch (platform) {
     case "deepseek":
-      return queryDeepSeek({ baseUrl, apiKey });
+      return queryDeepSeek({ baseUrl, apiKey, balanceUrl });
     case "openai":
       return queryOpenAI({ baseUrl, apiKey });
     case "openrouter":
-      return queryOpenRouter({ apiKey });
+      return queryOpenRouter({ apiKey, balanceUrl });
     default:
-      return queryGeneric({ baseUrl, apiKey });
+      return queryGeneric({ baseUrl, apiKey, balanceUrl });
   }
 }
 
@@ -41,3 +43,4 @@ export function platformLabel(platform) {
     }[platform] || platform
   );
 }
+

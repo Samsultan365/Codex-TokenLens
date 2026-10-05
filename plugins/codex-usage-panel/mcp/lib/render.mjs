@@ -71,11 +71,16 @@ export function renderBalanceMarkdown(balance) {
   const lines = [`## 余额面板 · ${platformName(balance.platform)}`];
   if (!balance.ok) {
     lines.push("", balance.message || "余额查询失败。");
+    if (balance.probedUrl) lines.push(`- 查询地址：${balance.probedUrl}`);
+    if (Array.isArray(balance.suggestedFixes) && balance.suggestedFixes.length > 0) {
+      lines.push("- 建议：", ...balance.suggestedFixes.map((item) => `  - ${item}`));
+    }
     if (balance.detail) lines.push("", "```", balance.detail, "```");
     return lines.join("\n");
   }
   switch (balance.platform) {
     case "deepseek":
+      if (balance.probedUrl) lines.push("", `- 查询地址：${balance.probedUrl}`);
       lines.push(
         "",
         `- 币种：${balance.currency || "—"}`,
@@ -104,3 +109,5 @@ export function renderBalanceMarkdown(balance) {
 export function renderCombined(usage, balance, platform) {
   return `${renderUsageMarkdown(usage, platform)}\n\n${renderBalanceMarkdown(balance)}`;
 }
+
+
