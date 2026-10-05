@@ -1,0 +1,20 @@
+﻿{
+  "name": "codex-usage-panel-marketplace",
+  "interface": {
+    "displayName": "Codex Usage Panel"
+  },
+  "plugins": [
+    {
+      "name": "codex-usage-panel",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codex-usage-panel"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

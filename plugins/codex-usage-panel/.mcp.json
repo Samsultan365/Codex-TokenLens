@@ -1,0 +1,35 @@
+﻿{
+  "mcpServers": {
+    "codex-usage-panel": {
+      "command": "cmd.exe",
+      "args": [
+        "/d",
+        "/s",
+        "/c",
+        "call",
+        "./mcp/launcher.cmd",
+        "./mcp/server.mjs"
+      ],
+      "cwd": ".",
+      "enabled": true,
+      "default_tools_approval_mode": "approve",
+      "env_vars": [
+        "CODEX_HOME",
+        "CODEX_THREAD_ID",
+        "CODEX_MCP_NODE_PATH",
+        "CODEX_BROWSER_USE_NODE_PATH",
+        "CODEX_ELECTRON_RESOURCES_PATH",
+        "CODEX_CLI_PATH",
+        "HOME",
+        "USERPROFILE",
+        "LOCALAPPDATA",
+        "PATH",
+        "DEEPSEEK_API_KEY",
+        "OPENAI_API_KEY",
+        "OPENROUTER_API_KEY"
+      ],
+      "startup_timeout_sec": 10,
+      "tool_timeout_sec": 30
+    }
+  }
+}

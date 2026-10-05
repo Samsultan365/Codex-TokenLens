@@ -1,0 +1,15 @@
+﻿{
+  "providers": {
+    "deepseek": {
+      "api_key_env": "DEEPSEEK_API_KEY",
+      "balance_url": "https://api.deepseek.com/user/balance"
+    },
+    "openai": {
+      "api_key_env": "OPENAI_API_KEY"
+    },
+    "openrouter": {
+      "api_key_env": "OPENROUTER_API_KEY",
+      "balance_url": "https://openrouter.ai/api/v1/credits"
+    }
+  }
+}

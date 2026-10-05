@@ -1,0 +1,4 @@
+﻿node_modules/
+*.log
+.codex-usage-panel.cache.json
+.DS_Store

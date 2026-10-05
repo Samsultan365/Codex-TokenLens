@@ -1,0 +1,161 @@
+﻿import fs from "node:fs";
+import path from "node:path";
+import { codexHome } from "./config.mjs";
+
+const SESSION_ROOT = path.join(codexHome(), "sessions");
+const TAIL_BYTES = 512 * 1024;
+
+function collectJsonl(root) {
+  const files = [];
+  const walk = (directory) => {
+    let entries = [];
+    try {
+      entries = fs.readdirSync(directory, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const full = path.join(directory, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.isFile() && entry.name.endsWith(".jsonl")) {
+        try {
+          files.push({ path: full, mtimeMs: fs.statSync(full).mtimeMs });
+        } catch {
+          // Ignore files that disappear while scanning.
+        }
+      }
+    }
+  };
+  walk(root);
+  return files.sort((a, b) => b.mtimeMs - a.mtimeMs);
+}
+
+function readTail(file) {
+  const stat = fs.statSync(file);
+  const length = Math.min(stat.size, TAIL_BYTES);
+  const buffer = Buffer.alloc(length);
+  const handle = fs.openSync(file, "r");
+  try {
+    fs.readSync(handle, buffer, 0, length, stat.size - length);
+  } finally {
+    fs.closeSync(handle);
+  }
+  const text = buffer.toString("utf8");
+  const lines = text.split(/\r?\n/);
+  // If the file is larger than the tail window, the first line is partial.
+  if (stat.size > TAIL_BYTES) lines.shift();
+  return lines;
+}
+
+function threadIdFromName(file) {
+  const match = path.basename(file).match(/[0-9a-f]{8}-[0-9a-f-]{27,}/i);
+  return match ? match[0] : null;
+}
+
+function normalizeLimit(limit) {
+  if (!limit || typeof limit !== "object") return null;
+  const used = Number(limit.used_percent ?? limit.usedPercent ?? 0);
+  return {
+    usedPercent: used,
+    remainingPercent: Math.max(0, Math.min(100, 100 - used)),
+    resetsAt: limit.resets_at ? Number(limit.resets_at) : null,
+    windowDurationMins: limit.window_duration_mins
+      ? Number(limit.window_duration_mins)
+      : null,
+  };
+}
+
+function extractTokenCount(entry) {
+  if (!entry) return null;
+  const payload =
+    entry.type === "token_count"
+      ? entry
+      : entry.type === "event_msg" && entry.payload?.type === "token_count"
+        ? entry.payload
+        : null;
+  if (!payload) return null;
+  const info = payload.info || {};
+  const last = info.last_token_usage || {};
+  const total = info.total_token_usage || {};
+  const contextWindow = Number(info.model_context_window || 0);
+  const lastInput = Number(last.input_tokens || 0);
+  return {
+    observedAt: entry.timestamp || payload.timestamp || null,
+    contextWindow,
+    last: {
+      inputTokens: lastInput,
+      cachedInputTokens: Number(last.cached_input_tokens || 0),
+      cacheWriteInputTokens: Number(last.cache_write_input_tokens || 0),
+      outputTokens: Number(last.output_tokens || 0),
+      reasoningOutputTokens: Number(last.reasoning_output_tokens || 0),
+      totalTokens: Number(last.total_tokens || 0),
+      contextPercent: contextWindow > 0 ? (lastInput / contextWindow) * 100 : null,
+    },
+    total: {
+      inputTokens: Number(total.input_tokens || 0),
+      cachedInputTokens: Number(total.cached_input_tokens || 0),
+      cacheWriteInputTokens: Number(total.cache_write_input_tokens || 0),
+      outputTokens: Number(total.output_tokens || 0),
+      reasoningOutputTokens: Number(total.reasoning_output_tokens || 0),
+      totalTokens: Number(total.total_tokens || 0),
+    },
+    rateLimits: normalizeRateLimits(payload.rate_limits),
+  };
+}
+
+function normalizeRateLimits(rateLimits) {
+  if (!rateLimits || typeof rateLimits !== "object") return null;
+  const credits = rateLimits.credits;
+  return {
+    limitId: rateLimits.limit_id ?? rateLimits.limitId ?? null,
+    limitName: rateLimits.limit_name ?? rateLimits.limitName ?? null,
+    planType: rateLimits.plan_type ?? rateLimits.planType ?? null,
+    primary: normalizeLimit(rateLimits.primary),
+    secondary: normalizeLimit(rateLimits.secondary),
+    credits: credits
+      ? {
+          balance: typeof credits.balance === "string" ? credits.balance : null,
+          hasCredits: Boolean(credits.hasCredits),
+          unlimited: Boolean(credits.unlimited),
+        }
+      : null,
+  };
+}
+
+export function latestLocalUsage(preferredThreadId) {
+  const threadId = preferredThreadId || process.env.CODEX_THREAD_ID || null;
+  const files = collectJsonl(SESSION_ROOT);
+  if (files.length === 0) return null;
+
+  let ordered = files;
+  if (threadId) {
+    const matched = files.filter((file) => threadIdFromName(file.path) === threadId);
+    if (matched.length > 0) ordered = matched;
+  }
+
+  for (const file of ordered) {
+    const lines = readTail(file.path);
+    for (let i = lines.length - 1; i >= 0; i -= 1) {
+      let entry;
+      try {
+        entry = JSON.parse(lines[i]);
+      } catch {
+        continue;
+      }
+      const usage = extractTokenCount(entry);
+      if (!usage) continue;
+      return {
+        source: "local_jsonl",
+        file: file.path,
+        threadId: threadIdFromName(file.path) || threadId || null,
+        ...usage,
+      };
+    }
+  }
+  return null;
+}
+
+export function availableSessionCount() {
+  return collectJsonl(SESSION_ROOT).length;
+}
+
