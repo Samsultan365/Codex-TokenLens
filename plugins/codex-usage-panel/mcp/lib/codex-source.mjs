@@ -1,9 +1,19 @@
 ﻿import fs from "node:fs";
 import path from "node:path";
 import { codexHome } from "./config.mjs";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+let DatabaseSync = null;
+try {
+  ({ DatabaseSync } = require("node:sqlite"));
+} catch {
+  DatabaseSync = null;
+}
 
 const SESSION_ROOT = path.join(codexHome(), "sessions");
 const SESSION_INDEX = path.join(codexHome(), "session_index.jsonl");
+const STATE_DB_DIR = codexHome();
 const TAIL_BYTES = 512 * 1024;
 
 function collectJsonl(root) {
@@ -65,6 +75,40 @@ function loadThreadNames() {
     // index may not exist yet
   }
   return names;
+}
+
+function newestStateDb() {
+  try {
+    const entries = fs.readdirSync(STATE_DB_DIR).filter((name) => /^state_\d+\.sqlite$/.test(name));
+    if (entries.length === 0) return null;
+    entries.sort((a, b) => Number(b.match(/\d+/)[0]) - Number(a.match(/\\d+/)[0]));
+    return path.join(STATE_DB_DIR, entries[0]);
+  } catch {
+    return null;
+  }
+}
+
+function readActiveThread() {
+  if (!DatabaseSync) return null;
+  const file = newestStateDb();
+  if (!file) return null;
+  let db;
+  try {
+    db = new DatabaseSync(file, { readOnly: true });
+  } catch {
+    return null;
+  }
+  try {
+    return db
+      .prepare(
+        "SELECT id, rollout_path, name, title, tokens_used, model, recency_at_ms FROM threads WHERE archived=0 ORDER BY recency_at_ms DESC LIMIT 1"
+      )
+      .get();
+  } catch {
+    return null;
+  } finally {
+    try { db.close(); } catch {}
+  }
 }
 
 function threadIdFromName(file) {
@@ -143,15 +187,31 @@ function normalizeRateLimits(rateLimits) {
 }
 
 export function latestLocalUsage(preferredThreadId) {
-  const threadId = preferredThreadId || process.env.CODEX_THREAD_ID || null;
+  const stateThread = readActiveThread();
+  const threadId = preferredThreadId || process.env.CODEX_THREAD_ID || stateThread?.id || null;
   const threadNames = loadThreadNames();
   const files = collectJsonl(SESSION_ROOT);
-  if (files.length === 0) return null;
+  if (files.length === 0 && !stateThread) return null;
 
   let ordered = files;
   if (threadId) {
     const matched = files.filter((file) => threadIdFromName(file.path) === threadId);
     if (matched.length > 0) ordered = matched;
+  }
+
+  if (ordered.length === 0 && stateThread) {
+    return {
+      source: "state_db",
+      file: stateThread.rollout_path || null,
+      threadId: stateThread.id,
+      threadName: stateThread.name || threadNames.get(stateThread.id) || stateThread.title || null,
+      stateTokensUsed: Number(stateThread.tokens_used || 0),
+      observedAt: null,
+      contextWindow: null,
+      last: null,
+      total: { totalTokens: Number(stateThread.tokens_used || 0) },
+      rateLimits: null,
+    };
   }
 
   for (const file of ordered) {
@@ -166,11 +226,14 @@ export function latestLocalUsage(preferredThreadId) {
       const usage = extractTokenCount(entry);
       if (!usage) continue;
       const resolvedThreadId = threadIdFromName(file.path) || threadId || null;
+      const stateName = resolvedThreadId === stateThread?.id ? stateThread.name || stateThread.title || null : null;
+      const stateTokens = resolvedThreadId === stateThread?.id ? Number(stateThread.tokens_used || 0) : null;
       return {
-        source: "local_jsonl",
+        source: "state_db+local_jsonl",
         file: file.path,
         threadId: resolvedThreadId,
-        threadName: resolvedThreadId ? threadNames.get(resolvedThreadId) || null : null,
+        threadName: stateName || (resolvedThreadId ? threadNames.get(resolvedThreadId) || null : null),
+        stateTokensUsed: stateTokens,
         ...usage,
       };
     }
@@ -181,5 +244,7 @@ export function latestLocalUsage(preferredThreadId) {
 export function availableSessionCount() {
   return collectJsonl(SESSION_ROOT).length;
 }
+
+
 
 

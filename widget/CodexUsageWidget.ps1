@@ -154,10 +154,11 @@ function Show-Widget {
 <Window
   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  FontFamily="Segoe UI"
   WindowStyle="None" AllowsTransparency="True" Background="Transparent"
   ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False"
-  Width="252" Height="92">
-  <Border x:Name="Root" CornerRadius="14" Background="#F2101A2B" BorderBrush="#5C0F766E" BorderThickness="1" Padding="14,9">
+  Width="300" Height="108">
+  <Border x:Name="Root" CornerRadius="14" Background="#F2101A2B" BorderBrush="#5C0F766E" BorderThickness="1" Padding="16,12">
     <Grid>
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto"/>
@@ -168,10 +169,10 @@ function Show-Widget {
         <ColumnDefinition Width="*"/>
         <ColumnDefinition Width="Auto"/>
       </Grid.ColumnDefinitions>
-      <TextBlock x:Name="ThreadText" Grid.Column="0" Text="当前对话" Foreground="#9FB3C8" FontSize="11"/>
-      <TextBlock x:Name="CloseText" Grid.Column="1" Text="✕" Foreground="#8FA3B8" FontSize="11" Cursor="Hand" VerticalAlignment="Top"/>
-      <TextBlock x:Name="UsageText" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,4,0,0" Foreground="#FFFFFF" FontSize="14" FontWeight="SemiBold" Text="已用 token 读取中…"/>
-      <TextBlock x:Name="BalanceText" Grid.Row="2" Grid.ColumnSpan="2" Margin="0,3,0,0" Foreground="#5EEAD4" FontSize="12" Text="余额读取中…"/>
+      <TextBlock x:Name="ThreadText" Grid.Column="0" Text="当前对话" Foreground="#9FB3C8" FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,0,4,0"/>
+      <TextBlock x:Name="CloseText" Grid.Column="1" Text="✕" Foreground="#8FA3B8" FontSize="13" Cursor="Hand" VerticalAlignment="Top" Margin="6,-2,0,0"/>
+      <TextBlock x:Name="UsageText" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,6,0,0" Foreground="#FFFFFF" FontSize="15" FontWeight="SemiBold" Text="已用 token 读取中…"/>
+      <TextBlock x:Name="BalanceText" Grid.Row="2" Grid.ColumnSpan="2" Margin="0,4,0,0" Foreground="#5EEAD4" FontSize="13" Text="余额读取中…"/>
     </Grid>
   </Border>
 </Window>
@@ -269,6 +270,7 @@ if ($Test) {
 } else {
   Show-Widget
 }
+
 
 
 
