@@ -1,4 +1,4 @@
-﻿import { loadPluginConfig } from "../config.mjs";
+import { loadPluginConfig } from "../config.mjs";
 import { resolveFallbackApiKey } from "../credentials.mjs";
 import { queryDeepSeek } from "./deepseek.mjs";
 import { queryOpenAI } from "./openai.mjs";

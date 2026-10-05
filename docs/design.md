@@ -1,4 +1,4 @@
-﻿# Design notes
+# Design notes
 
 ## Goals
 

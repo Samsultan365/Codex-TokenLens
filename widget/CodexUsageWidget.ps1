@@ -1,4 +1,4 @@
-﻿param(
+param(
   [switch]$Test
 )
 
@@ -10,7 +10,7 @@ Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName PresentationCore
 Add-Type -AssemblyName WindowsBase
 
-if (-not ("CodexUsageWidget.NativeMethods" -as [type])) {
+if (-not ("CodexUsageWidget_NativeMethods" -as [type])) {
   Add-Type @"
 using System;
 using System.Runtime.InteropServices;
@@ -26,6 +26,10 @@ public static class CodexUsageWidget_NativeMethods {
 $script:PluginDir = $null
 $script:DebugLog = Join-Path $env:USERPROFILE ".codex\codex-usage-widget-debug.log"
 $script:SettingsPath = Join-Path $env:USERPROFILE ".codex\codex-usage-widget.json"
+
+function Write-Log($message) {
+  try { Add-Content -Path $script:DebugLog -Value ("[{0}] {1}" -f (Get-Date -Format o), $message) -Encoding UTF8 } catch {}
+}
 
 function Resolve-PluginDir {
   if ($script:PluginDir) { return $script:PluginDir }
@@ -64,50 +68,26 @@ function Find-Node {
   return $null
 }
 
-function Write-Log($message) {
-  try {
-    Add-Content -Path $script:DebugLog -Value ("[{0}] {1}" -f (Get-Date -Format o), $message) -Encoding UTF8
-  } catch {}
-}
-
 function Get-Snapshot([switch]$SkipBalance) {
   $node = Find-Node
   $pluginDir = Resolve-PluginDir
-  if (-not $node -or -not $pluginDir) {
-    Write-Log "missing node/plugin: node=$node plugin=$pluginDir"
-    return $null
-  }
+  if (-not $node -or -not $pluginDir) { Write-Log "missing node/plugin"; return $null }
   $cli = Join-Path $pluginDir "mcp\cli.mjs"
-  if (-not (Test-Path $cli)) {
-    Write-Log "missing cli: $cli"
-    return $null
-  }
+  if (-not (Test-Path $cli)) { Write-Log "missing cli"; return $null }
   $oldThreadId = $env:CODEX_THREAD_ID
   $env:CODEX_THREAD_ID = $null
   try {
-    if ($SkipBalance) {
-      $raw = & $node $cli --json --no-balance 2>&1 | Out-String
-    } else {
-      $raw = & $node $cli --json 2>&1 | Out-String
-    }
+    if ($SkipBalance) { $raw = & $node $cli --json --no-balance 2>&1 | Out-String }
+    else { $raw = & $node $cli --json 2>&1 | Out-String }
   } finally {
     $env:CODEX_THREAD_ID = $oldThreadId
   }
-  $exit = $LASTEXITCODE
-  if (-not $raw) {
-    Write-Log "empty output exit=$exit cli=$cli node=$node"
-    return $null
-  }
-  try { return ($raw | ConvertFrom-Json) } catch {
-    Write-Log "parse error: $($_.Exception.Message) head=$($raw.Substring(0, [Math]::Min(300, $raw.Length)))"
-    return $null
-  }
+  if (-not $raw) { Write-Log "empty output"; return $null }
+  try { return ($raw | ConvertFrom-Json) } catch { Write-Log "parse error: $($_.Exception.Message)"; return $null }
 }
 
 function Read-Settings {
-  if (Test-Path $script:SettingsPath) {
-    try { return (Get-Content -Raw $script:SettingsPath | ConvertFrom-Json) } catch {}
-  }
+  if (Test-Path $script:SettingsPath) { try { return (Get-Content -Raw $script:SettingsPath | ConvertFrom-Json) } catch {} }
   return $null
 }
 
@@ -120,23 +100,25 @@ function Write-Settings($window) {
   } catch {}
 }
 
-function Shorten-Text($text, [int]$max = 18) {
-  if (-not $text) { return "当前对话" }
+function Shorten-Text($text, [int]$max = 26) {
+  if (-not $text) { return "Current chat" }
   if ($text.Length -le $max) { return $text }
-  return $text.Substring(0, $max) + "…"
+  return $text.Substring(0, $max) + "..."
+}
+
+function Wait-ForCodexWindow {
+  $deadline = (Get-Date).AddMinutes(30)
+  while ((Get-Date) -lt $deadline) {
+    $proc = Get-Process Codex,ChatGPT -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+    if ($proc) { return $true }
+    Start-Sleep -Seconds 2
+  }
+  return $false
 }
 
 function Get-CodexRect {
-  if (-not $script:WindowLogged) {
-    $script:WindowLogged = $true
-    $procs = Get-Process Codex,ChatGPT -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,MainWindowHandle,MainWindowTitle
-    Write-Log ("codex_windows=" + (($procs | ForEach-Object { "$($_.Id):$($_.ProcessName):$($_.MainWindowHandle):$($_.MainWindowTitle)" }) -join " | "))
-  }
-  $codex = Get-Process Codex -ErrorAction SilentlyContinue |
-    Where-Object { $_.MainWindowHandle -ne 0 } |
-    Select-Object -First 1
+  $codex = Get-Process Codex,ChatGPT -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
   if (-not $codex) { return $null }
-
   $rect = New-Object CodexUsageWidget_NativeMethods+RECT
   if ([CodexUsageWidget_NativeMethods]::GetWindowRect($codex.MainWindowHandle, [ref]$rect)) {
     return [ordered]@{ Left=$rect.Left; Top=$rect.Top; Right=$rect.Right; Bottom=$rect.Bottom }
@@ -149,24 +131,9 @@ function Move-NextToCodex($window) {
   if (-not $rect) { return }
   $screenRight = [System.Windows.SystemParameters]::WorkArea.Right
   $desiredLeft = [double]$rect.Right + 8
-  if (($desiredLeft + $window.Width) -le $screenRight) {
-    $window.Left = $desiredLeft
-  } else {
-    $window.Left = [double]$rect.Right - $window.Width - 12
-  }
+  if (($desiredLeft + $window.Width) -le $screenRight) { $window.Left = $desiredLeft }
+  else { $window.Left = [double]$rect.Right - $window.Width - 12 }
   $window.Top = [double]$rect.Top + 12
-}
-
-function Wait-ForCodexWindow {
-  $deadline = (Get-Date).AddMinutes(30)
-  while ((Get-Date) -lt $deadline) {
-    $proc = Get-Process Codex,ChatGPT -ErrorAction SilentlyContinue |
-      Where-Object { $_.MainWindowHandle -ne 0 } |
-      Select-Object -First 1
-    if ($proc) { return $true }
-    Start-Sleep -Seconds 2
-  }
-  return $false
 }
 
 function Show-Widget {
@@ -174,33 +141,20 @@ function Show-Widget {
   $pluginDir = Resolve-PluginDir
   $node = Find-Node
   if (-not $pluginDir -or -not $node) {
-    [System.Windows.MessageBox]::Show("找不到 codex-usage-panel 插件或 Node 运行时。", "Codex Usage Widget")
+    [System.Windows.MessageBox]::Show("Codex TokenLens could not find the plugin or Node runtime.", "Codex TokenLens")
     return
   }
 
   $xaml = @"
-<Window
-  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  FontFamily="Segoe UI"
-  WindowStyle="None" AllowsTransparency="True" Background="Transparent"
-  ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False"
-  Width="300" Height="108">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" FontFamily="Segoe UI" WindowStyle="None" AllowsTransparency="True" Background="Transparent" ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False" Width="320" Height="112">
   <Border x:Name="Root" CornerRadius="14" Background="#F2101A2B" BorderBrush="#5C0F766E" BorderThickness="1" Padding="16,12">
     <Grid>
-      <Grid.RowDefinitions>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="Auto"/>
-      </Grid.RowDefinitions>
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*"/>
-        <ColumnDefinition Width="Auto"/>
-      </Grid.ColumnDefinitions>
-      <TextBlock x:Name="ThreadText" Grid.Column="0" Text="当前对话" Foreground="#9FB3C8" FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,0,4,0"/>
-      <TextBlock x:Name="CloseText" Grid.Column="1" Text="✕" Foreground="#8FA3B8" FontSize="13" Cursor="Hand" VerticalAlignment="Top" Margin="6,-2,0,0"/>
-      <TextBlock x:Name="UsageText" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,6,0,0" Foreground="#FFFFFF" FontSize="15" FontWeight="SemiBold" Text="已用 token 读取中…"/>
-      <TextBlock x:Name="BalanceText" Grid.Row="2" Grid.ColumnSpan="2" Margin="0,4,0,0" Foreground="#5EEAD4" FontSize="13" Text="余额读取中…"/>
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <TextBlock x:Name="ThreadText" Grid.Column="0" Text="Current chat" Foreground="#9FB3C8" FontSize="12" TextTrimming="CharacterEllipsis"/>
+      <TextBlock x:Name="CloseText" Grid.Column="1" Text="X" Foreground="#8FA3B8" FontSize="13" Cursor="Hand" VerticalAlignment="Top" Margin="6,-2,0,0"/>
+      <TextBlock x:Name="UsageText" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,6,0,0" Foreground="#FFFFFF" FontSize="15" FontWeight="SemiBold" Text="Usage loading..."/>
+      <TextBlock x:Name="BalanceText" Grid.Row="2" Grid.ColumnSpan="2" Margin="0,4,0,0" Foreground="#5EEAD4" FontSize="13" Text="Balance loading..."/>
     </Grid>
   </Border>
 </Window>
@@ -215,57 +169,27 @@ function Show-Widget {
   $root = $window.FindName("Root")
 
   $settings = Read-Settings
-  if ($settings) {
-    try {
-      $window.Left = [double]$settings.left
-      $window.Top = [double]$settings.top
-    } catch {}
-  } else {
-    Move-NextToCodex $window
-    if ($window.Left -le 0) {
-      $window.Left = [System.Windows.SystemParameters]::WorkArea.Right - $window.Width - 20
-      $window.Top = 40
-    }
-  }
+  if ($settings) { try { $window.Left = [double]$settings.left; $window.Top = [double]$settings.top } catch {} }
+  else { Move-NextToCodex $window; if ($window.Left -le 0) { $window.Left = [System.Windows.SystemParameters]::WorkArea.Right - $window.Width - 20; $window.Top = 40 } }
 
   $root.Add_MouseLeftButtonDown({ try { $window.DragMove() } catch {} })
-  $close.Add_MouseLeftButtonUp({
-    $_.Handled = $true
-    Write-Settings $window
-    $window.Close()
-  })
+  $close.Add_MouseLeftButtonUp({ $_.Handled = $true; Write-Settings $window; $window.Close() })
 
   function Update-UI($data) {
-    if (-not $data) {
-      $threadText.Text = "当前对话"
-      $usageText.Text = "读取失败"
-      $balanceText.Text = "余额不可用"
-      return
-    }
-
+    if (-not $data) { $threadText.Text = "Current chat"; $usageText.Text = "Read failed"; $balanceText.Text = "Balance unavailable"; return }
     $usage = $data.usage
     $balance = $data.balance
-
-    $threadText.Text = Shorten-Text $usage.threadName 18
-
+    $threadText.Text = Shorten-Text $usage.threadName 28
     $used = 0
     if ($usage.total -and $usage.total.totalTokens -ne $null) { $used = [int64]$usage.total.totalTokens }
     elseif ($usage.last -and $usage.last.totalTokens -ne $null) { $used = [int64]$usage.last.totalTokens }
-
     $percent = 0.0
     if ($usage.last -and $usage.last.contextPercent -ne $null) { $percent = [double]$usage.last.contextPercent }
-
-    $usageText.Text = "已用 {0:N0} token · 上下文 {1:N0}%" -f $used, $percent
-
-    if ($balance -and $balance.ok -and $balance.platform -eq "deepseek") {
-      $balanceText.Text = "余额 ¥{0}" -f $balance.totalBalance
-    } elseif ($balance -and $balance.ok -and $balance.platform -eq "openrouter") {
-      $balanceText.Text = "余额 {0} credits" -f $balance.totalCredits
-    } elseif ($balance -and $balance.ok) {
-      $balanceText.Text = "余额：账户有效"
-    } else {
-      $balanceText.Text = "余额不可用"
-    }
+    $usageText.Text = "Used {0:N0} tokens  |  Context {1:N0}%" -f $used, $percent
+    if ($balance -and $balance.ok -and $balance.platform -eq "deepseek") { $balanceText.Text = "Balance CNY {0}" -f $balance.totalBalance }
+    elseif ($balance -and $balance.ok -and $balance.platform -eq "openrouter") { $balanceText.Text = "Balance {0} credits" -f $balance.totalCredits }
+    elseif ($balance -and $balance.ok) { $balanceText.Text = "Balance: account valid" }
+    else { $balanceText.Text = "Balance unavailable" }
   }
 
   $script:LastBalance = $null
@@ -274,17 +198,9 @@ function Show-Widget {
   $timer.Interval = [TimeSpan]::FromSeconds(1)
   $timer.Add_Tick({
     $script:Tick += 1
-    $withBalance = ($script:Tick % 10 -eq 0)
-    if ($withBalance) {
-      $data = Get-Snapshot
-    } else {
-      $data = Get-Snapshot -SkipBalance
-    }
-    if ($data -and $null -eq $data.balance -and $script:LastBalance) {
-      $data.balance = $script:LastBalance
-    } elseif ($data -and $data.balance) {
-      $script:LastBalance = $data.balance
-    }
+    if (($script:Tick % 10) -eq 0) { $data = Get-Snapshot } else { $data = Get-Snapshot -SkipBalance }
+    if ($data -and $null -eq $data.balance -and $script:LastBalance) { $data.balance = $script:LastBalance }
+    elseif ($data -and $data.balance) { $script:LastBalance = $data.balance }
     Update-UI $data
     Move-NextToCodex $window
     Write-Settings $window
@@ -296,28 +212,11 @@ function Show-Widget {
   Update-UI $data
   Move-NextToCodex $window
   Write-Settings $window
-
   [void]$window.ShowDialog()
 }
 
 if ($Test) {
-  $node = Find-Node
-  $pluginDir = Resolve-PluginDir
-  $snapshot = Get-Snapshot
-  [ordered]@{
-    node = $node
-    pluginDir = $pluginDir
-    snapshot = $snapshot
-  } | ConvertTo-Json -Depth 12
+  [ordered]@{ node = Find-Node; pluginDir = Resolve-PluginDir; snapshot = Get-Snapshot } | ConvertTo-Json -Depth 12
 } else {
   Show-Widget
 }
-
-
-
-
-
-
-
-
-

@@ -1,4 +1,4 @@
-﻿import { platformLabel } from "./adapters/index.mjs";
+import { platformLabel } from "./adapters/index.mjs";
 
 export function formatNumber(value) {
   const number = Number(value);

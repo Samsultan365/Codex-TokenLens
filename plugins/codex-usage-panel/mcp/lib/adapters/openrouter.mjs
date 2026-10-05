@@ -1,4 +1,4 @@
-﻿import { fetchJson } from "./fetch-json.mjs";
+import { fetchJson } from "./fetch-json.mjs";
 
 export async function queryOpenRouter({ apiKey }) {
   if (!apiKey) {

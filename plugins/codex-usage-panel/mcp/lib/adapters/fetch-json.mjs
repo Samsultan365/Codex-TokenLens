@@ -1,4 +1,4 @@
-﻿export async function fetchJson(url, headers = {}, timeoutMs = 8000) {
+export async function fetchJson(url, headers = {}, timeoutMs = 8000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {

@@ -1,4 +1,4 @@
-﻿import { resolvePlatform, loadPluginConfig } from "./lib/config.mjs";
+import { resolvePlatform, loadPluginConfig } from "./lib/config.mjs";
 import { latestLocalUsage } from "./lib/codex-source.mjs";
 import { queryBalance } from "./lib/adapters/index.mjs";
 import { renderCombined } from "./lib/render.mjs";

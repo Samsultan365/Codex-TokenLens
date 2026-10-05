@@ -1,4 +1,4 @@
-﻿---
+---
 name: codex-usage-panel
 description: Show current Codex token usage, context occupancy, rate-limit status, and provider balance. Use when the user asks about Codex usage, token usage, context window, 5h/weekly limits, remaining usage, provider balance, DeepSeek/OpenAI/OpenRouter credits, or wants a small inline usage panel.
 ---

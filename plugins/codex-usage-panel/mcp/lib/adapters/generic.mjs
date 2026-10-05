@@ -1,4 +1,4 @@
-﻿import { fetchJson } from "./fetch-json.mjs";
+import { fetchJson } from "./fetch-json.mjs";
 
 function originFor(baseUrl) {
   try {
