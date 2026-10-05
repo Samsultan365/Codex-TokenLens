@@ -39,7 +39,11 @@ These can be queried by spawning `codex app-server proxy`. They are more accurat
 
 ## Secrets
 
+- Keys are read from environment variables first.
+- For DeepSeek with CC Switch installed, the plugin may read the current Codex provider key from `~/.cc-switch/cc-switch.db` as a local fallback.
+
 - Keys are read from environment variables only.
 - Optional config stores `api_key_env` names, never raw secrets.
 - The repository must not contain `auth.json`, session JSONL, or `.env`.
+
 

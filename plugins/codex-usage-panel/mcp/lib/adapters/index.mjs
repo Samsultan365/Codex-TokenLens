@@ -1,4 +1,5 @@
 ﻿import { loadPluginConfig } from "../config.mjs";
+import { resolveFallbackApiKey } from "../credentials.mjs";
 import { queryDeepSeek } from "./deepseek.mjs";
 import { queryOpenAI } from "./openai.mjs";
 import { queryOpenRouter } from "./openrouter.mjs";
@@ -13,7 +14,8 @@ const DEFAULT_ENV = {
 export function apiKeyFor(platform, pluginConfig) {
   const override = pluginConfig?.providers?.[platform]?.api_key_env;
   const envName = override || DEFAULT_ENV[platform];
-  return envName ? process.env[envName] || null : null;
+  if (envName && process.env[envName]) return process.env[envName];
+  return resolveFallbackApiKey(platform);
 }
 
 export async function queryBalance(platformInfo, pluginConfig) {
@@ -33,6 +35,14 @@ export async function queryBalance(platformInfo, pluginConfig) {
   }
 }
 
+export function apiKeySourceFor(platform, pluginConfig) {
+  const override = pluginConfig?.providers?.[platform]?.api_key_env;
+  const envName = override || DEFAULT_ENV[platform];
+  if (envName && process.env[envName]) return "env";
+  if (resolveFallbackApiKey(platform)) return "cc-switch";
+  return null;
+}
+
 export function platformLabel(platform) {
   return (
     {
@@ -43,4 +53,6 @@ export function platformLabel(platform) {
     }[platform] || platform
   );
 }
+
+
 

@@ -1,7 +1,7 @@
 ﻿import readline from "node:readline";
 import { loadPluginConfig, resolvePlatform, maskSecret } from "./lib/config.mjs";
 import { latestLocalUsage, availableSessionCount } from "./lib/codex-source.mjs";
-import { queryBalance, apiKeyFor } from "./lib/adapters/index.mjs";
+import { queryBalance, apiKeyFor, apiKeySourceFor } from "./lib/adapters/index.mjs";
 import { renderUsageMarkdown, renderBalanceMarkdown, renderCombined } from "./lib/render.mjs";
 
 const SERVER_NAME = "codex-usage-panel";
@@ -157,8 +157,10 @@ async function handleTool(name, args) {
     const platform = resolvePlatform();
     const pluginConfig = loadPluginConfig();
     const keyStatus = {};
+    const keySource = {};
     for (const p of ["deepseek", "openai", "openrouter"]) {
       keyStatus[p] = Boolean(apiKeyFor(p, pluginConfig));
+      keySource[p] = apiKeySourceFor(p, pluginConfig);
     }
     const diagnostics = {
       codexHome: platform.codexHome,
@@ -169,9 +171,10 @@ async function handleTool(name, args) {
       displayName: platform.displayName,
       sessionFiles: availableSessionCount(),
       apiKeyConfigured: keyStatus,
+      apiKeySource: keySource,
       authType: platform.auth?.OPENAI_API_KEY ? "api_key" : "unknown",
       openaiKeyMasked: maskSecret(platform.auth?.OPENAI_API_KEY),
-      note: "本地读取 `.codex/sessions`；余额密钥只从环境变量读取，不会写入仓库。",
+      note: "本地读取 `.codex/sessions`；余额密钥只从环境变量或本机 CC Switch 读取，不会写入仓库。",
     };
     return withStructured(
       `## Codex Usage Panel 诊断\n\n\`\`\`json\n${JSON.stringify(diagnostics, null, 2)}\n\`\`\``,
@@ -244,3 +247,5 @@ if (process.argv.includes("--smoke")) {
     process.exitCode = 1;
   });
 }
+
+

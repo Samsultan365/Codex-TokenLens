@@ -111,9 +111,14 @@ $env:DEEPSEEK_API_KEY = "sk-..."
 - OpenAI Platform 没有公开的余额查询 API，插件只做 API Key 校验并提示前往网页查看。
 - 当前自定义 provider（如本地代理）若不代理余额接口，需要单独设置对应平台的 `*_API_KEY` 或配置 `balance_url`。
 
+## CC Switch 自动读取 DeepSeek 密钥
+
+如果系统已安装 [CC Switch](https://github.com/cc-switch/cc-switch) 且当前 Codex provider 是 DeepSeek，插件会优先从 `~/.cc-switch/cc-switch.db` 自动读取密钥用于余额查询。该过程只在本机发生，密钥不会写入仓库、日志或聊天内容。
+
 ## 隐私
 
 - 不写入或上传会话 JSONL 内容。
 - 余额请求仅发往识别出的平台端点。
 - 诊断输出会把密钥打码。
+
 
