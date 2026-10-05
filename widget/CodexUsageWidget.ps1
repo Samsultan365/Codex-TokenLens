@@ -3,6 +3,8 @@
 )
 
 $ErrorActionPreference = "SilentlyContinue"
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+$OutputEncoding = [Console]::OutputEncoding
 
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName PresentationCore
@@ -22,6 +24,7 @@ public static class CodexUsageWidget_NativeMethods {
 }
 
 $script:PluginDir = $null
+$script:DebugLog = Join-Path $env:USERPROFILE ".codex\codex-usage-widget-debug.log"
 $script:SettingsPath = Join-Path $env:USERPROFILE ".codex\codex-usage-widget.json"
 
 function Resolve-PluginDir {
@@ -61,15 +64,34 @@ function Find-Node {
   return $null
 }
 
+function Write-Log($message) {
+  try {
+    Add-Content -Path $script:DebugLog -Value ("[{0}] {1}" -f (Get-Date -Format o), $message) -Encoding UTF8
+  } catch {}
+}
+
 function Get-Snapshot {
   $node = Find-Node
   $pluginDir = Resolve-PluginDir
-  if (-not $node -or -not $pluginDir) { return $null }
+  if (-not $node -or -not $pluginDir) {
+    Write-Log "missing node/plugin: node=$node plugin=$pluginDir"
+    return $null
+  }
   $cli = Join-Path $pluginDir "mcp\cli.mjs"
-  if (-not (Test-Path $cli)) { return $null }
-  $raw = & $node $cli --json 2>$null | Out-String
-  if (-not $raw) { return $null }
-  try { return ($raw | ConvertFrom-Json) } catch { return $null }
+  if (-not (Test-Path $cli)) {
+    Write-Log "missing cli: $cli"
+    return $null
+  }
+  $raw = & $node $cli --json 2>&1 | Out-String
+  $exit = $LASTEXITCODE
+  if (-not $raw) {
+    Write-Log "empty output exit=$exit cli=$cli node=$node"
+    return $null
+  }
+  try { return ($raw | ConvertFrom-Json) } catch {
+    Write-Log "parse error: $($_.Exception.Message) head=$($raw.Substring(0, [Math]::Min(300, $raw.Length)))"
+    return $null
+  }
 }
 
 function Read-Settings {
@@ -247,3 +269,6 @@ if ($Test) {
 } else {
   Show-Widget
 }
+
+
+
