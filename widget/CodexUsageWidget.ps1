@@ -82,7 +82,13 @@ function Get-Snapshot {
     Write-Log "missing cli: $cli"
     return $null
   }
-  $raw = & $node $cli --json 2>&1 | Out-String
+  $oldThreadId = $env:CODEX_THREAD_ID
+  $env:CODEX_THREAD_ID = $null
+  try {
+    $raw = & $node $cli --json 2>&1 | Out-String
+  } finally {
+    $env:CODEX_THREAD_ID = $oldThreadId
+  }
   $exit = $LASTEXITCODE
   if (-not $raw) {
     Write-Log "empty output exit=$exit cli=$cli node=$node"
@@ -117,6 +123,11 @@ function Shorten-Text($text, [int]$max = 18) {
 }
 
 function Get-CodexRect {
+  if (-not $script:WindowLogged) {
+    $script:WindowLogged = $true
+    $procs = Get-Process Codex,ChatGPT -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,MainWindowHandle,MainWindowTitle
+    Write-Log ("codex_windows=" + (($procs | ForEach-Object { "$($_.Id):$($_.ProcessName):$($_.MainWindowHandle):$($_.MainWindowTitle)" }) -join " | "))
+  }
   $codex = Get-Process Codex -ErrorAction SilentlyContinue |
     Where-Object { $_.MainWindowHandle -ne 0 } |
     Select-Object -First 1
@@ -270,6 +281,8 @@ if ($Test) {
 } else {
   Show-Widget
 }
+
+
 
 
 
