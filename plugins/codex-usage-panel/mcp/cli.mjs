@@ -5,7 +5,8 @@ import { renderCombined } from "./lib/render.mjs";
 
 const platform = resolvePlatform();
 const usage = latestLocalUsage();
-const balance = await queryBalance(platform, loadPluginConfig());
+const skipBalance = process.argv.includes("--no-balance");
+const balance = skipBalance ? null : await queryBalance(platform, loadPluginConfig());
 
 const safePlatform = { ...platform, auth: undefined };
 const payload = {
@@ -20,3 +21,4 @@ if (process.argv.includes("--markdown")) {
 } else {
   process.stdout.write(`${JSON.stringify(payload)}\n`);
 }
+

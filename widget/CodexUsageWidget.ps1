@@ -70,7 +70,7 @@ function Write-Log($message) {
   } catch {}
 }
 
-function Get-Snapshot {
+function Get-Snapshot([switch]$SkipBalance) {
   $node = Find-Node
   $pluginDir = Resolve-PluginDir
   if (-not $node -or -not $pluginDir) {
@@ -85,7 +85,11 @@ function Get-Snapshot {
   $oldThreadId = $env:CODEX_THREAD_ID
   $env:CODEX_THREAD_ID = $null
   try {
-    $raw = & $node $cli --json 2>&1 | Out-String
+    if ($SkipBalance) {
+      $raw = & $node $cli --json --no-balance 2>&1 | Out-String
+    } else {
+      $raw = & $node $cli --json 2>&1 | Out-String
+    }
   } finally {
     $env:CODEX_THREAD_ID = $oldThreadId
   }
@@ -251,10 +255,23 @@ function Show-Widget {
     }
   }
 
+  $script:LastBalance = $null
+  $script:Tick = 0
   $timer = New-Object System.Windows.Threading.DispatcherTimer
-  $timer.Interval = [TimeSpan]::FromSeconds(8)
+  $timer.Interval = [TimeSpan]::FromSeconds(1)
   $timer.Add_Tick({
-    $data = Get-Snapshot
+    $script:Tick += 1
+    $withBalance = ($script:Tick % 10 -eq 0)
+    if ($withBalance) {
+      $data = Get-Snapshot
+    } else {
+      $data = Get-Snapshot -SkipBalance
+    }
+    if ($data -and $null -eq $data.balance -and $script:LastBalance) {
+      $data.balance = $script:LastBalance
+    } elseif ($data -and $data.balance) {
+      $script:LastBalance = $data.balance
+    }
     Update-UI $data
     Move-NextToCodex $window
     Write-Settings $window
@@ -262,6 +279,7 @@ function Show-Widget {
   $timer.Start()
 
   $data = Get-Snapshot
+  if ($data -and $data.balance) { $script:LastBalance = $data.balance }
   Update-UI $data
   Move-NextToCodex $window
   Write-Settings $window
@@ -281,6 +299,8 @@ if ($Test) {
 } else {
   Show-Widget
 }
+
+
 
 
 

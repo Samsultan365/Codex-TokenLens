@@ -17,6 +17,38 @@
   ],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
+  "hooks": {
+    "hooks": {
+      "SessionStart": [
+        {
+          "hooks": [
+            {
+              "type": "mcp_tool",
+              "server": "codex-usage-panel",
+              "tool": "codex_usage_sync_thread",
+              "input": {
+                "session_id": "${session_id}"
+              }
+            }
+          ]
+        }
+      ],
+      "UserPromptSubmit": [
+        {
+          "hooks": [
+            {
+              "type": "mcp_tool",
+              "server": "codex-usage-panel",
+              "tool": "codex_usage_sync_thread",
+              "input": {
+                "session_id": "${session_id}"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
   "interface": {
     "displayName": "Codex Usage Panel",
     "shortDescription": "Token usage and balance in chat",
@@ -36,3 +68,4 @@
     "screenshots": []
   }
 }
+

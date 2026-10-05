@@ -1,5 +1,7 @@
-﻿import readline from "node:readline";
-import { loadPluginConfig, resolvePlatform, maskSecret } from "./lib/config.mjs";
+﻿import fs from "node:fs";
+import path from "node:path";
+import readline from "node:readline";
+import { codexHome, loadPluginConfig, resolvePlatform, maskSecret } from "./lib/config.mjs";
 import { latestLocalUsage, availableSessionCount } from "./lib/codex-source.mjs";
 import { queryAppServerSnapshot } from "./lib/app-server-source.mjs";
 import { queryBalance, apiKeyFor, apiKeySourceFor } from "./lib/adapters/index.mjs";
@@ -71,6 +73,18 @@ const TOOLS = [
           enum: ["markdown", "json"],
           default: "markdown",
         },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "codex_usage_sync_thread",
+    description:
+      "Internal hook tool. Writes the current Codex session id to a local file so the desktop widget can follow conversation switches.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        session_id: { type: "string", description: "Current Codex session/thread id." },
       },
       additionalProperties: false,
     },
@@ -184,6 +198,15 @@ async function handleTool(name, args) {
       : withStructured(markdown, { usage, balance });
   }
 
+  if (name === "codex_usage_sync_thread") {
+    const sessionId = args?.session_id || process.env.CODEX_THREAD_ID || null;
+    if (!sessionId) throw new Error("missing session_id");
+    const file = path.join(codexHome(), "codex-usage-panel-active-thread.json");
+    const payload = { sessionId, updatedAt: new Date().toISOString() };
+    fs.writeFileSync(file, JSON.stringify(payload), "utf8");
+    return textContent(`Synced active thread: ${sessionId}`);
+  }
+
   if (name === "codex_usage_diagnostics") {
     const platform = resolvePlatform();
     const pluginConfig = loadPluginConfig();
@@ -294,6 +317,7 @@ if (process.argv.includes("--smoke")) {
     process.exitCode = 1;
   });
 }
+
 
 
 

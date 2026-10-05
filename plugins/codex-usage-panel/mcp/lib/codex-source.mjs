@@ -88,6 +88,23 @@ function newestStateDb() {
   }
 }
 
+const ACTIVE_THREAD_FILE = path.join(codexHome(), "codex-usage-panel-active-thread.json");
+
+function readActiveThreadFile() {
+  try {
+    const raw = fs.readFileSync(ACTIVE_THREAD_FILE, "utf8");
+    const data = JSON.parse(raw);
+    if (!data.sessionId) return null;
+    const updatedAt = Date.parse(data.updatedAt);
+    if (Number.isFinite(updatedAt) && Date.now() - updatedAt < 2 * 60 * 1000) {
+      return { sessionId: data.sessionId, updatedAt: data.updatedAt }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function readActiveThread() {
   if (!DatabaseSync) return null;
   const file = newestStateDb();
@@ -188,7 +205,8 @@ function normalizeRateLimits(rateLimits) {
 
 export function latestLocalUsage(preferredThreadId) {
   const stateThread = readActiveThread();
-  const threadId = preferredThreadId || process.env.CODEX_THREAD_ID || stateThread?.id || null;
+  const activeThreadFile = readActiveThreadFile();
+  const threadId = preferredThreadId || process.env.CODEX_THREAD_ID || activeThreadFile?.sessionId || stateThread?.id || null;
   const threadNames = loadThreadNames();
   const files = collectJsonl(SESSION_ROOT);
   if (files.length === 0 && !stateThread) return null;
@@ -244,6 +262,7 @@ export function latestLocalUsage(preferredThreadId) {
 export function availableSessionCount() {
   return collectJsonl(SESSION_ROOT).length;
 }
+
 
 
 
