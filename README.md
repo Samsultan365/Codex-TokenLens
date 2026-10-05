@@ -4,6 +4,27 @@
 
 > 本项目是第三方工具，不是 OpenAI 官方产品。插件只读取本机 Codex 数据和可选的环境变量密钥，不上传会话内容。
 
+## 实时置顶小组件
+
+如果你要的是常驻在旁边、自动刷新、不用打开网页的显示方式，请启动：
+
+```powershell
+.\widget\CodexUsageWidget.ps1
+```
+
+或直接双击：
+
+```powershell
+.\widget\Launch-Widget.vbs
+```
+
+小组件特点：
+
+- 始终置顶、无任务栏图标、可拖动并记住位置
+- 每 10 秒刷新当前上下文 token、会话累计 token 和余额
+- 复用同一个 Node 数据层（`mcp/cli.mjs`），与 Codex 插件结果一致
+- 当前定位到屏幕右上角，可拖到 Codex 窗口旁边
+
 ## 当前能力（v0.1 框架）
 
 - `codex_usage_panel`：最新线程 token 用量 + 上下文占用 + rate-limit 状态
@@ -28,7 +49,7 @@
 │   │       ├── render.mjs
 │   │       └── adapters/
 │   └── skills/codex-usage-panel/SKILL.md
-├── docs/design.md
+├── widget/\n│   ├── CodexUsageWidget.ps1\n│   └── Launch-Widget.vbs\n├── docs/design.md
 └── README.md
 ```
 
@@ -127,6 +148,7 @@ $env:DEEPSEEK_API_KEY = "sk-..."
 - 不写入或上传会话 JSONL 内容。
 - 余额请求仅发往识别出的平台端点。
 - 诊断输出会把密钥打码。
+
 
 
 
