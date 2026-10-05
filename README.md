@@ -37,16 +37,16 @@
 ### 从 GitHub 安装 marketplace
 
 ```powershell
-codex plugin marketplace add codex-usage-panel <你的仓库 Git URL>
-codex plugin list --marketplace codex-usage-panel --available --json
-codex plugin add codex-usage-panel --marketplace codex-usage-panel
+codex plugin marketplace add <你的仓库 Git URL>
+codex plugin list --marketplace codex-usage-panel-marketplace --available --json
+codex plugin add codex-usage-panel --marketplace codex-usage-panel-marketplace
 ```
 
 ### 本地安装 marketplace
 
 ```powershell
-codex plugin marketplace add codex-usage-panel "C:\path\to\codex-usage-panel"
-codex plugin add codex-usage-panel --marketplace codex-usage-panel
+codex plugin marketplace add "C:\path\to\codex-usage-panel"
+codex plugin add codex-usage-panel --marketplace codex-usage-panel-marketplace
 ```
 
 ### 配置余额密钥
@@ -127,6 +127,7 @@ $env:DEEPSEEK_API_KEY = "sk-..."
 - 不写入或上传会话 JSONL 内容。
 - 余额请求仅发往识别出的平台端点。
 - 诊断输出会把密钥打码。
+
 
 
 
